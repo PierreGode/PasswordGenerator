@@ -20,7 +20,7 @@ def onClickabout():
 window = Tk()
 window.title("Pierre's Password Generator")
 window.config(padx=50, pady=50, bg="#235066")
-window.iconbitmap(r'C:\Users\pge\OneDrive - Tobii AB (Publ)\Documents\code\lock.ico')
+window.iconbitmap(r'https://www.flaticon.com/free-icon/lock_891399?term=lock&page=1&position=1&origin=tag&related_id=891399')
 donothing = print("Nothing")
 menubar = Menu(window)
 filemenu = Menu(menubar, tearoff=0)
