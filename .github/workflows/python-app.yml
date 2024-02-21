@@ -43,6 +43,6 @@ jobs:
       with:
         name: python-package
         path: dist/*
-#   - name: Test with pytest
-#     run: |
-#       pytest
+    - name: Test with pytest
+      run: |
+        pytest
