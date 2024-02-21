@@ -34,6 +34,12 @@ jobs:
         # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+    - name: Run pytest with xvfb
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+        xvfb-run -a pytest
+
     - name: Build package
       run: |
         python setup.py sdist bdist_wheel
@@ -43,6 +49,3 @@ jobs:
       with:
         name: python-package
         path: dist/*
-#   - name: Test with pytest
-#     run: |
-#       pytest
