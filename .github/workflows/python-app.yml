@@ -34,6 +34,19 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    # This is a placeholder for whatever steps you want to use to build/package your application
+    - name: Build/package
+      run: |
+        # Your commands to build and/or package your application
+        # For example, if you're creating a Python package:
+        python setup.py sdist bdist_wheel
+    # Upload the build artifacts
+    - uses: actions/upload-artifact@v3
+      with:
+        name: packaged-application
+        path: |
+          dist/*
+        if-no-files-found: error # 'warn' or 'error' are allowed here
 #    - name: Test with pytest
 #      run: |
 #        pytest
