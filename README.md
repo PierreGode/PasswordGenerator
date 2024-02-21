@@ -1,4 +1,4 @@
-# PasswordGenerator 2024
+# PasswordGenerator 2024 test
 A Python password generator for windows. 
 To enable copy option run code from terminal as administrator
 
