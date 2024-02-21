@@ -1,6 +1,5 @@
 # PasswordGenerator 2024
 A Python password generator for windows. 
-To enable copy option run code from terminal as administrator
 
 depends on:
 tkinter
