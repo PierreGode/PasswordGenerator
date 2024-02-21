@@ -40,12 +40,6 @@ jobs:
       run: |
         pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
 
-    - name: Upload Python package artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: python-package
-        path: dist/*
-
     - name: Upload Executable artifacts
       uses: actions/upload-artifact@v3
       with:
