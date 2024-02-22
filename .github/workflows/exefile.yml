@@ -1,4 +1,4 @@
-name: Python application
+name: Windows package build
 
 on:
   push:
