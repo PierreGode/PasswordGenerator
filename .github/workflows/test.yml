@@ -2,7 +2,7 @@ name: Python application
 
 on:
   pull_request:
-    branches: [ "*test*" ]
+    branches: [ "test" ]
 
 permissions:
   contents: read
