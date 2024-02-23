@@ -34,10 +34,10 @@ def passwordGenerator():
     
     try:
         length = int(charInput.get())
-        if length < 4 or length > 32:
+        if length < 8 or length > 48:
             raise ValueError
     except ValueError:
-        messagebox.showwarning("Invalid Input", "Please enter a valid length (4-32).")
+        messagebox.showwarning("Invalid Input", "Please enter a valid length (8-48).")
         return
     
     password = "".join(random.choice(password_chars) for _ in range(length))
@@ -94,7 +94,8 @@ copyClipboardCheck.grid(row=3, column=0, columnspan=2, sticky="w")
 generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
 generateBtn.grid(row=4, column=0, columnspan=2, pady=(20,0))
 
-copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()), bg="#2196F3", fg="white", font=("Arial", 12), width=20)
+# Modified: Lambda function for copyBtn to show "Copied!" when manually copied
+copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: [pyperclip.copy(passwordField.get()), copyBtn.config(text="Copied!")], bg="#2196F3", fg="white", font=("Arial", 12), width=20)
 copyBtn.grid(row=4, column=2, columnspan=2, pady=(20,0))
 copyBtn.bind("<Button-1>", resetCopyBtnText)
 
