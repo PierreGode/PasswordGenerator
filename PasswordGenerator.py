@@ -94,12 +94,18 @@ copyClipboardCheck.grid(row=3, column=0, columnspan=2, sticky="w")
 generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
 generateBtn.grid(row=4, column=0, columnspan=2, pady=(20,0))
 
-# Modified: Lambda function for copyBtn to show "Copied!" when manually copied
 copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: [pyperclip.copy(passwordField.get()), copyBtn.config(text="Copied!")], bg="#2196F3", fg="white", font=("Arial", 12), width=20)
 copyBtn.grid(row=4, column=2, columnspan=2, pady=(20,0))
 copyBtn.bind("<Button-1>", resetCopyBtnText)
 
 passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
 passwordField.grid(row=5, column=0, columnspan=4, pady=(10,0))
+
+# Configure rows and columns for responsive design
+for i in range(6):  # Configure all six rows to be responsive
+    window.grid_rowconfigure(i, weight=1)
+
+for i in range(4):  # Configure all four columns to be responsive
+    window.grid_columnconfigure(i, weight=1)
 
 window.mainloop()
