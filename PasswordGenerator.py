@@ -47,13 +47,42 @@ def passwordGenerator():
     passwordField.delete(0, tk.END)
     passwordField.insert(0, password)
     
+    # Assessing Password Strength
+    strength = assessPasswordStrength(password)
+    updatePasswordStrengthDisplay(strength)
+    
     if copyToClipboard.get():
         pyperclip.copy(password)
         copyBtn.config(text="Copied!")
 
-# Reset Copy Button Text (unused in this configuration but left if needed for other interactions)
-def resetCopyBtnText(event):
-    copyBtn.config(text="Copy to Clipboard")
+# Assessing Password Strength
+def assessPasswordStrength(password):
+    length = len(password)
+    has_lower = any(char.islower() for char in password)
+    has_upper = any(char.isupper() for char in password)
+    has_digit = any(char.isdigit() for char in password)
+    has_special = any(char in string.punctuation for char in password)
+    
+    if length >= 12 and has_lower and has_upper and has_digit and has_special:
+        return "Very Strong"
+    elif length >= 10 and has_lower and has_upper and (has_digit or has_special):
+        return "Strong"
+    elif length >= 8 and (has_lower or has_upper) and (has_digit or has_special):
+        return "Weak"
+    else:
+        return "Very Weak"
+
+def updatePasswordStrengthDisplay(strength):
+    passwordStrengthLabel.config(text=f"Password Strength: {strength}")
+    # Optional: Adjust the color based on the strength
+    colors = {
+        "Very Weak": "#ff0000",
+        "Weak": "#ff9900",
+        "Strong": "#00ff00",
+        "Very Strong": "#006400"
+    }
+    passwordStrengthLabel.config(fg=colors[strength])
+
 
 # Initialize Window
 window = tk.Tk()
@@ -103,8 +132,11 @@ copyBtn.grid(row=4, column=2, columnspan=2, pady=(20,0))
 passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
 passwordField.grid(row=5, column=0, columnspan=4, pady=(10,0))
 
+passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
+passwordStrengthLabel.grid(row=6, column=0, columnspan=4)
+
 # Configure rows and columns for responsive design
-for i in range(6):
+for i in range(7):
     window.grid_rowconfigure(i, weight=1)
 for i in range(4):
     window.grid_columnconfigure(i, weight=1)
