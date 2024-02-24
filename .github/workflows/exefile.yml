@@ -1,4 +1,4 @@
-name: Package Build for Windows and Ubuntu
+name: Windows and Ubuntu package build
 
 on:
   push:
@@ -10,9 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  windows_build:
-    name: build (windows)  # Distinct name for the Windows build check
-    runs-on: windows-latest
+  windows-build:
+    runs-on: windows-latest  # For Windows build
 
     steps:
     - uses: actions/checkout@v3
@@ -39,17 +38,16 @@ jobs:
 
     - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
+        pyinstaller --onefile --windowed PasswordGenerator.py
 
     - name: Upload Executable artifacts
       uses: actions/upload-artifact@v3
       with:
         name: windows-executable
         path: dist/*.exe
-
-  ubuntu_build:
-    name: build (ubuntu)  # Distinct name for the Ubuntu build check
-    runs-on: ubuntu-latest
+  
+  ubuntu-build:
+    runs-on: ubuntu-latest  # For Ubuntu build
 
     steps:
     - uses: actions/checkout@v3
@@ -77,5 +75,5 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: python-package
+        name: ubuntu-python-package
         path: dist/*
