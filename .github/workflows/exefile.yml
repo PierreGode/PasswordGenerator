@@ -1,4 +1,4 @@
-name: Windows package build
+name: Windows and Ubuntu package build
 
 on:
   push:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: windows-latest  # Changed to Windows runner
+  windows-build:
+    runs-on: windows-latest  # For Windows build
 
     steps:
     - uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller  # Include pyinstaller for building executables
+        pip install flake8 pytest wheel pyinstaller
         pip install -r requirements.txt
 
     - name: Lint with flake8
@@ -38,10 +38,42 @@ jobs:
 
     - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
+        pyinstaller --onefile --windowed PasswordGenerator.py
 
     - name: Upload Executable artifacts
       uses: actions/upload-artifact@v3
       with:
         name: windows-executable
         path: dist/*.exe
+  
+  ubuntu-build:
+    runs-on: ubuntu-latest  # For Ubuntu build
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest wheel
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Build package
+      run: |
+        python setup.py sdist bdist_wheel
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ubuntu-python-package
+        path: dist/*
