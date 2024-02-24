@@ -27,7 +27,7 @@ def clearPyper():
     pyperclip.copy('')
 
 # Generate Sentence-based Password
-def generateSentenceBasedPassword():
+def generateSentenceBasedPassword(length):
     generator = pipeline('text-generation', model='gpt2')
     sentences = generator(" ", max_length=50, num_return_sequences=1)
     sentence = sentences[0]['generated_text']
@@ -44,7 +44,7 @@ def passwordGenerator():
             length = int(charInput.get())
             if length < 4 or length > 10:
                 raise ValueError
-            password = generateSentenceBasedPassword()
+            password = generateSentenceBasedPassword(length)  # Adjusted to pass length
         except ValueError:
             messagebox.showwarning("Invalid Input", "Please enter a valid number of sentences (4-10).")
             return
