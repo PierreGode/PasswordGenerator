@@ -7,7 +7,6 @@ import random
 import pyperclip
 from transformers import pipeline
 
-# Check if the application is run as an administrator
 def is_admin():
     try:
         return os.getuid() == 0
