@@ -2,9 +2,9 @@ name: Windows package build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "Testbuild" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "Testbuild" ]
 
 permissions:
   contents: read
