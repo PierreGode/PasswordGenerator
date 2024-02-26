@@ -8,4 +8,4 @@ Windows package is found [Here](https://github.com/PierreGode/PasswordGenerator/
 <p>
 NOTE! The package is NOT a signed package and Windows Defender will hate it! so do NOT use at an company's owned computer unless you wish for IT to chase you with pitchforks. but the package is perfectly safe to use. ( you can review the build  )
 <p>
-#Pierre Gode
+Pierre Gode
