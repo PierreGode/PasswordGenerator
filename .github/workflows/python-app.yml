@@ -1,4 +1,4 @@
-name: Build Artifacts
+name: Build Artifacts and Handle Closed PRs
 
 on:
   push:
@@ -12,37 +12,59 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest wheel  # Include wheel for building distributions
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest wheel  # Include wheel for building distributions
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Lint with flake8
-      run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
+      - name: Build package
+        run: |
+          python setup.py sdist bdist_wheel
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: python-package
-        path: dist/*
-#   - name: Test with pytest
-#     run: |
-#       pytest
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-package
+          path: dist/*
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Check if PR is Merged
+        id: check_pr_merged
+        run: |
+          if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+            echo "PR_MERGED=true" >> $GITHUB_ENV
+          else
+            echo "PR_MERGED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Close Pull Request
+        if: env.PR_MERGED == 'true'
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}  # Update with your actual secret name
+          action: "close"
+      
+      - name: PR Closed but not Merged
+        if: env.PR_MERGED == 'false'
+        run: echo "Pull request closed without merge. No further action taken."
