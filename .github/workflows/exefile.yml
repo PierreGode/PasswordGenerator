@@ -1,4 +1,4 @@
-name: Windows package build
+git puname: Windows package build
 
 on:
   push:
