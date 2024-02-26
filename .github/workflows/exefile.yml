@@ -45,3 +45,30 @@ jobs:
       with:
         name: windows-executable
         path: dist/*.exe
+
+
+close_pull_request_job:
+  if: github.event_name == 'pull_request' && github.event.action == 'closed'
+  runs-on: ubuntu-latest
+  name: Close Pull Request Job
+  steps:
+    - name: Check if PR is Merged
+      id: check_pr_merged
+      run: |
+        if [ ${{ github.event.pull_request.merged }} == true ]; then
+          echo "PR_MERGED=true" >> $GITHUB_ENV
+        else
+          echo "PR_MERGED=false" >> $GITHUB_ENV
+        fi
+
+    - name: Close Pull Request
+      if: env.PR_MERGED == 'true'
+      id: closepullrequest
+      uses: Azur
+      with:
+        azure_static_web_apps_api_token: ${{no secrets}}
+        action: "close"
+    
+    - name: PR Closed but not Merged
+      if: env.PR_MERGED == 'false'
+      run: echo "Pull request closed without merge. No further action taken."
