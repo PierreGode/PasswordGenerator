@@ -43,42 +43,27 @@ jobs:
           name: python-package
           path: dist/*
 
-close_pull_request_job:
+  close_pull_request_job:
   if: github.event_name == 'pull_request'
   runs-on: ubuntu-latest
-  name: Handle Closed Pull Request
+  name: Close Pull Request Job
   steps:
-    - name: Check PR Status
-      id: check_pr_status
+    - name: Check Pull Request State
+      id: check_state
       run: |
-        echo "Checking PR status..."
         if [[ "${{ github.event.action }}" == "closed" ]]; then
-          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "PR was merged."
-            echo "PR_MERGED=true" >> $GITHUB_ENV
-          else
-            echo "PR was closed without merging."
-            echo "PR_MERGED=false" >> $GITHUB_ENV
-          fi
+          echo "PR_CLOSED=true" >> $GITHUB_ENV
         else
-          echo "PR is not closed. No action required."
           echo "PR_CLOSED=false" >> $GITHUB_ENV
         fi
-
-    - name: Perform Actions for Merged PR
-      if: env.PR_MERGED == 'true'
-      run: |
-        echo "Performing actions for merged PR..."
-        # Your actions for a merged PR here
-
-    - name: Perform Actions for Closed but Not Merged PR
-      if: env.PR_MERGED == 'false'
-      run: |
-        echo "Performing actions for PR closed without merge."
-        # Your actions for a closed but not merged PR here
-
-    - name: No Action Needed
-      if: env.PR_CLOSED == 'false'
-      run: |
-        echo "PR is not closed. This job does nothing but ensures no skipped status."
-
+      - name: Handle Closed Pull Request
+        if: env.PR_CLOSED == 'true'
+        run: |
+          echo "Pull request is closed. Running the job..."
+          # Place here the commands you want to run if the PR is closed.
+          # This is where you would include interactions with Azure or other services as needed.
+      - name: Handle Not Closed Pull Request
+        if: env.PR_CLOSED == 'false'
+        run: |
+          echo "Pull request is not closed. Exiting successfully."
+          # This step ensures the job exits successfully if the PR is not closed.
