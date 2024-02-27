@@ -47,7 +47,7 @@ jobs:
         path: dist/*.exe
 
         
-close_pull_request_job:
+  close_pull_request_job:
   if: github.event_name == 'pull_request'
   runs-on: ubuntu-latest
   name: Close Pull Request Job
