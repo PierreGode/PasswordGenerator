@@ -2,46 +2,66 @@ name: Windows package build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "testmain" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "testmain" ]
 
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: windows-latest  # Changed to Windows runner
+    runs-on: windows-latest  # Using Windows runner
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller  # Include pyinstaller for building executables
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest wheel pyinstaller  # Include pyinstaller for building executables
+          pip install -r requirements.txt
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
+      - name: Build package
+        run: |
+          python setup.py sdist bdist_wheel
 
-    - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed PasswordGenerator.py  # Adjust with your script name
 
-    - name: Upload Executable artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: windows-executable
-        path: dist/*.exe
+      - name: Upload Executable artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-executable
+          path: dist/*.exe
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Check Pull Request State
+        id: check_state
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "PR_CLOSED=true" >> $GITHUB_ENV
+          else
+            echo "PR_CLOSED=false" >> $GITHUB_ENV
+          fi
+      - name: Echo Merged Pull Request
+        if: env.PR_CLOSED == 'true'
+        run: echo "Pull request has been merged."
+      - name: Echo Not Merged Pull Request
+        if: env.PR_CLOSED == 'false'
+        run: echo "Pull request is not merged."
