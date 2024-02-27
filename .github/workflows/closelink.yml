@@ -1,0 +1,17 @@
+name: Close link after merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  close_link_after_merge:
+    runs-on: ubuntu-latest
+    name: Close Link After Merge Job
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Echo Test
+        run: echo "This is a test to simulate closing the deployment link."
