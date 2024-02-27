@@ -44,7 +44,7 @@ jobs:
           path: dist/*
 
   close_pull_request_job:
-    if: github.event_name == 'pull_request' # Ensure this job runs for PR events
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
