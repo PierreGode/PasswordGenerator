@@ -43,3 +43,24 @@ jobs:
       with:
         name: python-package
         path: dist/*
+
+close_pull_request_job:
+  if: github.event_name == 'pull_request'
+  runs-on: ubuntu-latest
+  name: Close Pull Request Job
+  steps:
+    - name: Check Pull Request State
+      id: check_state
+      run: |
+        if [[ "${{ github.event.action }}" == "closed" ]]; then
+          echo "PR_CLOSED=true" >> $GITHUB_ENV
+        else
+          echo "PR_CLOSED=false" >> $GITHUB_ENV
+        fi
+    - name: Echo Close Pull Request
+      if: env.PR_CLOSED == 'true'
+      run: echo "Emulating clising the webapp link ."
+    - name: Handle Not Closed Pull Request
+      if: env.PR_CLOSED == 'false'
+      run: |
+        echo "Pull request is not closed. Exiting successfully."
