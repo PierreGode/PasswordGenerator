@@ -44,7 +44,7 @@ jobs:
           path: dist/*
 
   close_pull_request_job:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' # Ensure this job runs for PR events
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
@@ -58,8 +58,7 @@ jobs:
           fi
       - name: Echo Close Pull Request
         if: env.PR_CLOSED == 'true'
-        run: echo "Emulating clising the webapp link ."
+        run: echo "Emulating closing the webapp link."
       - name: Handle Not Closed Pull Request
         if: env.PR_CLOSED == 'false'
-        run: |
-          echo "Pull request is not closed. Exiting successfully."
+        run: echo "Pull request is not closed. Exiting successfully."
