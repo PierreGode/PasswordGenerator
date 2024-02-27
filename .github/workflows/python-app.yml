@@ -43,6 +43,23 @@ jobs:
       with:
         name: python-package
         path: dist/*
-#   - name: Test with pytest
-#     run: |
-#       pytest
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Check Pull Request State
+        id: check_state
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "PR_CLOSED=true" >> $GITHUB_ENV
+          else
+            echo "PR_CLOSED=false" >> $GITHUB_ENV
+          fi
+      - name: Echo Merged Pull Request
+        if: env.PR_CLOSED == 'true'
+        run: echo "Pull request has been merged."
+      - name: Echo Not Merged Pull Request
+        if: env.PR_CLOSED == 'false'
+        run: echo "Pull request is not merged."
