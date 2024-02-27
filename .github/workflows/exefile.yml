@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest  # Using Windows runner
+    runs-on: windows-latest  # Changed to Windows runner
 
     steps:
       - uses: actions/checkout@v3
@@ -38,7 +38,7 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile --windowed PasswordGenerator.py  # Adjust with your script name
+          pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
 
       - name: Upload Executable artifacts
         uses: actions/upload-artifact@v3
