@@ -2,4 +2,3 @@ pyperclip
 pytest
 flake8
 wheel
-transformers
