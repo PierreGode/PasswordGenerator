@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest  # Changed to Windows runner
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller  # Include pyinstaller for building executables
+        pip install flake8 pytest wheel pyinstaller
         pip install -r requirements.txt
 
     - name: Lint with flake8
@@ -38,7 +38,7 @@ jobs:
 
     - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py  # Replace with your actual main script if different
+        pyinstaller --onefile --windowed PasswordGenerator.py
 
     - name: Upload Executable artifacts
       uses: actions/upload-artifact@v3
