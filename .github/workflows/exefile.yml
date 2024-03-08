@@ -17,12 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Add this step to set up Node.js 20
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
