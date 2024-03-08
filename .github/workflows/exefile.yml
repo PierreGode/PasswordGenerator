@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest  # Changed to Windows runner
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
