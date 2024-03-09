@@ -1,7 +1,7 @@
 # PasswordGenerator 2024 package builder
 This build generates artifact and exe file.
 <p>
-A Password generator for Windows.
+A Password generator for Windows and Mac
 
 Windows package is found [Here](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml)
 
