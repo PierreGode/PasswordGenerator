@@ -28,8 +28,9 @@ def clearPyper():
 
 # Generate Sentence-based Password
 def generateSentenceBasedPassword(length):
-    generator = pipeline('text-generation', model='gpt2')
-    sentences = generator(" ", max_length=50, num_return_sequences=1)
+    generator = pipeline('text-generation', model='gpt2', truncation=True)
+    prompt = " "  # Starting prompt for the model
+    sentences = generator(prompt, max_length=50, num_return_sequences=1, truncation=True)
     sentence = sentences[0]['generated_text']
     password = ''.join(e for e in sentence if e.isalnum())  # Remove spaces and punctuation
     return password[:length]
