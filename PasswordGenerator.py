@@ -7,76 +7,65 @@ import random
 import pyperclip
 from transformers import pipeline
 
-# Check if the application is run as an administrator
 def is_admin():
     try:
         return os.getuid() == 0
     except AttributeError:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
 
-# Help Dialog
 def onClickHelp():
     messagebox.showinfo("Password Generator Help", "1. Choose password length.\n2. Select options for including special characters, sentences for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
 
-# About Dialog
 def onClickAbout():
     messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated Version 2024.")
 
-# Clear Clipboard
 def clearPyper():
     pyperclip.copy('')
 
-# Generate Sentence-based Password
-def generateSentenceBasedPassword(length):
+def generateSentenceBasedPassword(length, include_special_chars=False):
     generator = pipeline('text-generation', model='gpt2', truncation=True)
-    prompt = " "  # Starting prompt for the model
+    prompt = " "
     while True:
-        sentences = generator(prompt, max_length=100, num_return_sequences=1)  # Adjusted max_length for broader generation
+        sentences = generator(prompt, max_length=100, num_return_sequences=1)
         sentence = sentences[0]['generated_text']
         password = ''.join(e for e in sentence if e.isalnum())
         if len(password) >= length:
-            return password[:length]
+            password = password[:length]
+            break
+    if include_special_chars:
+        special_chars = string.punctuation
+        for _ in range(min(5, length//5)):  # Intersperse special chars
+            pos = random.randint(1, len(password)-2)
+            password = password[:pos] + random.choice(special_chars) + password[pos:]
+        password = password[:length]
+    return password
 
-# Generate Password
 def passwordGenerator():
     copyBtn.config(text="Copy to Clipboard")
+    include_special_chars = specialChars.get() == 1
+    
+    try:
+        length = int(charInput.get())
+    except ValueError:
+        messagebox.showwarning("Invalid Input", "Please enter a valid number.")
+        return
     
     if passwordType.get() == "Sentence":
-        try:
-            length = int(charInput.get())
-            if length < 4:  # Update condition based on requirements
-                raise ValueError
-            password = generateSentenceBasedPassword(length)
-        except ValueError:
-            messagebox.showwarning("Invalid Input", "Please enter a valid number.")
-            return
+        password = generateSentenceBasedPassword(length, include_special_chars)
     else:
-        if specialChars.get():
-            password_chars = string.ascii_letters + string.digits + string.punctuation
-        else:
-            password_chars = string.ascii_letters + string.digits
-        
-        try:
-            length = int(charInput.get())
-            if length < 8 or length > 48:
-                raise ValueError
-            password = "".join(random.choice(password_chars) for _ in range(length))
-        except ValueError:
-            messagebox.showwarning("Invalid Input", "Please enter a valid length (8-48).")
-            return
+        password_chars = string.ascii_letters + string.digits
+        if include_special_chars:
+            password_chars += string.punctuation
+        password = "".join(random.choice(password_chars) for _ in range(length))
     
     passwordField.delete(0, tk.END)
     passwordField.insert(0, password)
-    
-    # Assessing Password Strength
     strength = assessPasswordStrength(password)
     updatePasswordStrengthDisplay(strength)
-    
     if copyToClipboard.get():
         pyperclip.copy(password)
         copyBtn.config(text="Copied!")
 
-# Assessing Password Strength
 def assessPasswordStrength(password):
     length = len(password)
     has_lower = any(char.islower() for char in password)
@@ -94,21 +83,13 @@ def assessPasswordStrength(password):
         return "Very Weak"
 
 def updatePasswordStrengthDisplay(strength):
-    passwordStrengthLabel.config(text=f"Password Strength: {strength}")
-    colors = {
-        "Very Weak": "#ff0000",
-        "Weak": "#ff9900",
-        "Strong": "#00ff00",
-        "Very Strong": "#006400"
-    }
-    passwordStrengthLabel.config(fg=colors[strength])
+    colors = {"Very Weak": "#ff0000", "Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
+    passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
 
-# Initialize Window
 window = tk.Tk()
 window.title("Password Generator")
 window.config(padx=20, pady=20, bg="#f0f0f0")
 
-# Menu Initialization
 menubar = tk.Menu(window)
 fileMenu = tk.Menu(menubar, tearoff=0)
 fileMenu.add_command(label="Exit", command=window.quit)
@@ -121,12 +102,10 @@ menubar.add_cascade(label="Help", menu=helpMenu)
 
 window.config(menu=menubar)
 
-# Variables
 specialChars = tk.IntVar()
 copyToClipboard = tk.IntVar()
 passwordType = tk.StringVar(value="Traditional")
 
-# UI Elements
 titleLabel = tk.Label(window, text="Password Generator", bg="#f0f0f0", fg="#333333", font=("Arial", 20, "bold"))
 titleLabel.grid(row=0, column=0, columnspan=4, pady=(0,20))
 
@@ -149,7 +128,7 @@ passwordTypeTraditional.grid(row=3, column=2, sticky="w")
 passwordTypeSentence = tk.Radiobutton(window, text="Sentence", variable=passwordType, value="Sentence", bg="#f0f0f0", font=("Arial", 10))
 passwordTypeSentence.grid(row=3, column=3, sticky="w")
 
-copyClipboardCheck = tk.Checkbutton(window, text="Copy to Clipboard", variable=copyToClipboard, bg="#f0f0f0", font=("Arial", 10), state=tk.NORMAL if is_admin() else tk.DISABLED)
+copyClipboardCheck = tk.Checkbutton(window, text="Copy to Clipboard Automatically", variable=copyToClipboard, bg="#f0f0f0", font=("Arial", 10))
 copyClipboardCheck.grid(row=4, column=0, columnspan=2, sticky="w")
 
 generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
@@ -164,7 +143,6 @@ passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
 passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
 passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
 
-# Configure rows and columns for responsive design
 for i in range(8):
     window.grid_rowconfigure(i, weight=1)
 for i in range(4):
