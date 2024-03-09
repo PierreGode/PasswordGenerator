@@ -30,24 +30,25 @@ def clearPyper():
 def generateSentenceBasedPassword(length):
     generator = pipeline('text-generation', model='gpt2', truncation=True)
     prompt = " "  # Starting prompt for the model
-    sentences = generator(prompt, max_length=50, num_return_sequences=1, truncation=True)
-    sentence = sentences[0]['generated_text']
-    password = ''.join(e for e in sentence if e.isalnum())  # Remove spaces and punctuation
-    return password[:length]
+    while True:
+        sentences = generator(prompt, max_length=100, num_return_sequences=1)  # Adjusted max_length for broader generation
+        sentence = sentences[0]['generated_text']
+        password = ''.join(e for e in sentence if e.isalnum())
+        if len(password) >= length:
+            return password[:length]
 
 # Generate Password
 def passwordGenerator():
-    # Reset the Copy to Clipboard button's text when generating a new password
     copyBtn.config(text="Copy to Clipboard")
     
     if passwordType.get() == "Sentence":
         try:
             length = int(charInput.get())
-            if length < 4 or length > 10:
+            if length < 4:  # Update condition based on requirements
                 raise ValueError
-            password = generateSentenceBasedPassword(length)  # Adjusted to pass length
+            password = generateSentenceBasedPassword(length)
         except ValueError:
-            messagebox.showwarning("Invalid Input", "Please enter a valid number of sentences (4-10).")
+            messagebox.showwarning("Invalid Input", "Please enter a valid number.")
             return
     else:
         if specialChars.get():
@@ -59,11 +60,10 @@ def passwordGenerator():
             length = int(charInput.get())
             if length < 8 or length > 48:
                 raise ValueError
+            password = "".join(random.choice(password_chars) for _ in range(length))
         except ValueError:
             messagebox.showwarning("Invalid Input", "Please enter a valid length (8-48).")
             return
-        
-        password = "".join(random.choice(password_chars) for _ in range(length))
     
     passwordField.delete(0, tk.END)
     passwordField.insert(0, password)
@@ -95,7 +95,6 @@ def assessPasswordStrength(password):
 
 def updatePasswordStrengthDisplay(strength):
     passwordStrengthLabel.config(text=f"Password Strength: {strength}")
-    # Optional: Adjust the color based on the strength
     colors = {
         "Very Weak": "#ff0000",
         "Weak": "#ff9900",
@@ -109,7 +108,7 @@ window = tk.Tk()
 window.title("Password Generator")
 window.config(padx=20, pady=20, bg="#f0f0f0")
 
-# Menu
+# Menu Initialization
 menubar = tk.Menu(window)
 fileMenu = tk.Menu(menubar, tearoff=0)
 fileMenu.add_command(label="Exit", command=window.quit)
@@ -156,7 +155,7 @@ copyClipboardCheck.grid(row=4, column=0, columnspan=2, sticky="w")
 generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
 generateBtn.grid(row=5, column=0, columnspan=2, pady=(20,0))
 
-copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: [pyperclip.copy(passwordField.get()), copyBtn.config(text="Copied!")], bg="#2196F3", fg="white", font=("Arial", 12), width=20)
+copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()), bg="#2196F3", fg="white", font=("Arial", 12), width=20)
 copyBtn.grid(row=5, column=2, columnspan=2, pady=(20,0))
 
 passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
