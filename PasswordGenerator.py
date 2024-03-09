@@ -7,12 +7,6 @@ import random
 import pyperclip
 from transformers import pipeline
 
-def is_admin():
-    try:
-        return os.getuid() == 0
-    except AttributeError:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
-
 def onClickHelp():
     messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentences for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
 
