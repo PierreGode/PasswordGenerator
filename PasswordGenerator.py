@@ -6,6 +6,9 @@ import string
 import random
 import pyperclip
 from transformers import pipeline
+import sys
+
+sys.setrecursionlimit(1500)  # Example: Increase the limit to 1500
 
 def onClickHelp():
     messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentences for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
