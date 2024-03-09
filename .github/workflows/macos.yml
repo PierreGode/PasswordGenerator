@@ -1,3 +1,4 @@
+name: Windows package build
 on:
   push:
     branches: [ "main" ]
