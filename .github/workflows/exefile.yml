@@ -1,4 +1,4 @@
-name: Windows package build
+name: Windows Package Build
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-sign:
     runs-on: windows-latest
 
     steps:
@@ -41,8 +41,24 @@ jobs:
       run: |
         pyinstaller --onefile --windowed PasswordGenerator.py
 
-    - name: Upload Executable artifacts
+    - name: Generate Self-Signed Certificate
+      env:
+        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      run: |
+        $dnsName = "local.test" # or use ${{ secrets.CERT_DNS_NAME }} if you've set that secret
+        $pwd = ConvertTo-SecureString -String $Env:CERT_PASSWORD -Force -AsPlainText
+        $cert = New-SelfSignedCertificate -DnsName $dnsName -CertStoreLocation "cert:\LocalMachine\My" -KeySpec Signature
+        Export-PfxCertificate -Cert $cert -FilePath ".\certificate.pfx" -Password $pwd
+
+    - name: Sign the Executable
+      env:
+        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      run: |
+        $Env:SIGNTOOL_PATH = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+        & "$Env:SIGNTOOL_PATH\signtool.exe" sign /f ".\certificate.pfx" /p $Env:CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a ".\dist\PasswordGenerator.exe"
+
+    - name: Upload Signed Executable Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: windows-executable
+        name: signed-windows-executable
         path: dist/*.exe
