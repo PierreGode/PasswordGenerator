@@ -17,7 +17,7 @@ def clearPyper():
     pyperclip.copy('')
 
 def generateSentenceBasedPassword(length, include_special_chars=False):
-    generator = pipeline('text-generation', model='gpt2', truncation=True)
+    generator = pipeline('text-generation', model='distilgpt2', truncation=True)
     prompt = " "
     while True:
         sentences = generator(prompt, max_length=100, num_return_sequences=1)
