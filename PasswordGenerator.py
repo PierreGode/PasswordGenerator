@@ -13,7 +13,7 @@ generator = pipeline('text-generation', model='distilgpt2', truncation=True)
 # Pre-generate a word pool from the distilled GPT-2 model output
 word_pool = []
 
-def generate_word_pool(size=300):
+def generate_word_pool(size=15):
     global word_pool
     prompt = " "
     generated = generator(prompt, max_length=50, num_return_sequences=size)
