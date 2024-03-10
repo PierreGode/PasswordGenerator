@@ -68,4 +68,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: code-signing-certificate
+        # Use GitHub Actions expression syntax to reference the environment variable
         path: ${{ env.TEMP }}\code-signing-cert.pfx
