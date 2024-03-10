@@ -7,45 +7,68 @@ import random
 import pyperclip
 from transformers import pipeline
 
-# Initializing the generator using the distilled version of GPT-2
-generator = pipeline('text-generation', model='distilgpt2', truncation=True)
-
-# Pre-generate a word pool from the distilled GPT-2 model output
-word_pool = []
-
-def generate_word_pool(size=15):
-    global word_pool
-    prompt = " "
-    generated = generator(prompt, max_length=50, num_return_sequences=size)
-    for item in generated:
-        sentence = item['generated_text']
-        words = sentence.split()
-        for word in words:
-            clean_word = ''.join(e for e in word if e.isalnum())
-            if clean_word:
-                word_pool.append(clean_word)
-    word_pool = list(set(word_pool))  # Remove duplicates to ensure a variety of words
-
-generate_word_pool()
-
 def onClickHelp():
     messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentences for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
 
 def onClickAbout():
     messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated Version 2024.")
 
+def clearPyper():
+    pyperclip.copy('')
+
 def generateSentenceBasedPassword(length, include_special_chars=False):
-    password = ""
-    while len(password) < length:
-        password += random.choice(word_pool)
-        password = ''.join(e for e in password if e.isalnum())
-    password = password[:length]  # Ensure the password is of the desired length
+    generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+    prompt = " "
+    while True:
+        sentences = generator(prompt, max_length=100, num_return_sequences=1)
+        sentence = sentences[0]['generated_text']
+        password = ''.join(e for e in sentence if e.isalnum())
+        if len(password) >= length:
+            password = password[:length]
+            break
     if include_special_chars:
         special_chars = string.punctuation
-        for _ in range(min(5, length // 5)):
-            pos = random.randint(1, len(password) - 2)
+        for _ in range(min(5, length // 5)):  # Intersperse special chars
+            pos = random.randint(1, len(password)-2)
             password = password[:pos] + random.choice(special_chars) + password[pos:]
+        password = password[:length]
     return password
+
+def passwordGenerator():
+    copyBtn.config(text="Copy to Clipboard")
+    include_special_chars = specialChars.get() == 1
+    try:
+        length = int(charInput.get())
+        if length < 10:  # Enforcing password length to be at least 10
+            messagebox.showwarning("Invalid Input", "Password length must be at least 10.")
+            return
+    except ValueError:
+        messagebox.showwarning("Invalid Input", "Please enter a valid number.")
+        return
+
+    valid_password = False
+    while not valid_password:
+        if passwordType.get() == "Sentence":
+            password = generateSentenceBasedPassword(length, include_special_chars)
+        else:
+            password_chars = string.ascii_letters + string.digits
+            if include_special_chars:
+                password_chars += string.punctuation
+            password = "".join(random.choice(password_chars) for _ in range(length))
+        
+        strength = assessPasswordStrength(password)
+        if strength in ["Strong", "Very Strong"]:
+            valid_password = True
+        else:
+            continue  # Loop until a strong or very strong password is generated
+    
+    passwordField.delete(0, tk.END)
+    passwordField.insert(0, password)
+    updatePasswordStrengthDisplay(strength)
+    
+    if copyToClipboard.get():
+        pyperclip.copy(password)
+        copyBtn.config(text="Copied!")
 
 def assessPasswordStrength(password):
     length = len(password)
@@ -66,36 +89,6 @@ def assessPasswordStrength(password):
 def updatePasswordStrengthDisplay(strength):
     colors = {"Very Weak": "#ff0000", "Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
     passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
-
-def passwordGenerator():
-    copyBtn.config(text="Copy to Clipboard")
-    include_special_chars = specialChars.get() == 1
-    try:
-        length = int(charInput.get())
-        if length < 10:
-            messagebox.showwarning("Invalid Input", "Password length must be at least 10.")
-            return
-    except ValueError:
-        messagebox.showwarning("Invalid Input", "Please enter a valid number.")
-        return
-    
-    if passwordType.get() == "Sentence":
-        password = generateSentenceBasedPassword(length, include_special_chars)
-    else:
-        password_chars = string.ascii_letters + string.digits
-        if include_special_chars:
-            password_chars += string.punctuation
-        password = "".join(random.choice(password_chars) for _ in range(length))
-        
-    strength = assessPasswordStrength(password)
-
-    passwordField.delete(0, tk.END)
-    passwordField.insert(0, password)
-    updatePasswordStrengthDisplay(strength)
-    
-    if copyToClipboard.get() == 1:
-        pyperclip.copy(password)
-        copyBtn.config(text="Copied!")
 
 window = tk.Tk()
 window.title("Password Generator")
@@ -125,7 +118,7 @@ lengthLabel.grid(row=1, column=0, sticky="w")
 
 charInput = tk.Entry(window, font=("Arial", 12), width=10)
 charInput.grid(row=1, column=1, sticky="w")
-charInput.insert(0, "12")
+charInput.insert(0, "12")  # Default length set to 12, which meets the minimum requirement of 10
 
 specialCharsCheck = tk.Checkbutton(window, text="Include Special Characters", variable=specialChars, bg="#f0f0f0", font=("Arial", 10))
 specialCharsCheck.grid(row=2, column=0, columnspan=2, sticky="w")
@@ -153,5 +146,10 @@ passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
 
 passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
 passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
+
+for i in range(8):
+    window.grid_rowconfigure(i, weight=1)
+for i in range(4):
+    window.grid_columnconfigure(i, weight=1)
 
 window.mainloop()
