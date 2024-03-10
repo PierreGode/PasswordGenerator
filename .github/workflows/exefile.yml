@@ -57,16 +57,3 @@ jobs:
         $exePath = ".\dist\PasswordGenerator.exe"
         & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
       shell: pwsh
-
-    - name: Upload Signed Executable Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: signed-windows-executable
-        path: dist/*.exe
-
-    - name: Upload Certificate Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-signing-certificate
-        # Use GitHub Actions expression syntax to reference the environment variable
-        path: ${{ env.TEMP }}\code-signing-cert.pfx
