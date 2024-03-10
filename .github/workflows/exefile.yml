@@ -1,4 +1,4 @@
-name: Windows Package Build and Sign
+name: Windows Package Build and Cert-Signing
 
 on:
   push:
