@@ -41,25 +41,31 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         pyinstaller --onefile --windowed PasswordGenerator.py
-
-    - name: Generate Self-Signed Certificate
+    
+    - name: Decode Signing Certificate
       run: |
-        $cert = New-SelfSignedCertificate -DnsName "local.test" -CertStoreLocation "cert:\LocalMachine\My" -KeySpec Signature
-        $pwd = ConvertTo-SecureString -String "${{ secrets.CERT_PASSWORD }}" -Force -AsPlainText
-        Export-PfxCertificate -Cert $cert -FilePath "$env:TEMP\certificate.pfx" -Password $pwd
+        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
+        $certBytes = [System.Convert]::FromBase64String($base64Cert)
+        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
       shell: pwsh
 
     - name: Sign the Executable
       run: |
         $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        $certPath = "$env:TEMP\certificate.pfx"
+        $certPath = "$env:TEMP\code-signing-cert.pfx"
         $password = "${{ secrets.CERT_PASSWORD }}"
         $exePath = ".\dist\PasswordGenerator.exe"
         & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
       shell: pwsh
 
-    - name: Upload Signed Executable Artifacts
+    - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: signed-windows-executable
         path: dist/*.exe
+
+    - name: Upload Certificate Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-signing-certificate
+        path: ${{ env.TEMP }}\code-signing-cert.pfx
