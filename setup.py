@@ -1,11 +1,10 @@
 from setuptools import setup, find_packages
+import codecs
+import os
 
-# Specify your main script and options for py2app here
-APP = ['PasswordGenerator.py']  
-OPTIONS = {
-    'argv_emulation': True,
-    # Add any other py2app options you need here
-}
+# Utility function to read the README file.
+def read_readme(fname):
+    return codecs.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
 
 setup(
     name="PasswordGenerator",
@@ -13,24 +12,32 @@ setup(
     packages=find_packages(),
     install_requires=[
         "pyperclip",
-        # Add other dependencies here
     ],
+    extras_require={
+        'AI': ["transformers"],
+    },
     entry_points={
         'gui_scripts': [
             'passwordgenerator=PasswordGenerator:main',
         ],
     },
-    author="Your Name",
-    author_email="your.email@example.com",
+    package_data={
+        'passwordgenerator': ['data/*.dat'],  # Example, adjust according to your data files
+    },
+    author="Pierre Gode",
+    author_email="pierre@gode.one",
     description="A simple and efficient password generator application built with Tkinter.",
-    url="http://github.com/YourUsername/PasswordGenerator",
+    long_description=read_readme("README.md"),
+    long_description_content_type="text/markdown",
+    url="https://github.com/PierreGode/PasswordGenerator",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: End Users/Desktop",
+        "Topic :: Security",
     ],
+    license="MIT",
     python_requires='>=3.6',
-    options={'py2app': OPTIONS},  # py2app options
-    app=APP,  # py2app target
-    # Add any other necessary configuration for your package
 )
