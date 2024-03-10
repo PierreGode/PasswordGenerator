@@ -1,19 +1,19 @@
-name: Windows package build
+name: Windows Package Build and Sign
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-sign:
     runs-on: windows-latest
-
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -21,12 +21,13 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
-
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest wheel pyinstaller
-        pip install -r requirements.txt
+        if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
+      shell: pwsh
 
     - name: Lint with flake8
       run: |
@@ -40,9 +41,19 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         pyinstaller --onefile --windowed PasswordGenerator.py
+    
+    - name: Decode Signing Certificate
+      run: |
+        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
+        $certBytes = [System.Convert]::FromBase64String($base64Cert)
+        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
+      shell: pwsh
 
-    - name: Upload Executable artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-executable
-        path: dist/*.exe
+    - name: Sign the Executable
+      run: |
+        $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
+        $certPath = "$env:TEMP\code-signing-cert.pfx"
+        $password = "${{ secrets.CERT_PASSWORD }}"
+        $exePath = ".\dist\PasswordGenerator.exe"
+        & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+      shell: pwsh
