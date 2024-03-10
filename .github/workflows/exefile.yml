@@ -26,12 +26,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest wheel pyinstaller
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Lint with flake8
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source
+        # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127
 
     - name: Build package
       run: |
@@ -45,13 +47,13 @@ jobs:
       run: |
         $cert = New-SelfSignedCertificate -DnsName "local.test" -CertStoreLocation "cert:\LocalMachine\My" -KeySpec Signature
         $pwd = ConvertTo-SecureString -String "${{ secrets.CERT_PASSWORD }}" -Force -AsPlainText
-        Export-PfxCertificate -Cert $cert -FilePath ".\certificate.pfx" -Password $pwd
+        Export-PfxCertificate -Cert $cert -FilePath "$env:TEMP\certificate.pfx" -Password $pwd
       shell: pwsh
 
     - name: Sign the Executable
       run: |
         $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        $certPath = ".\certificate.pfx"
+        $certPath = "$env:TEMP\certificate.pfx"
         $password = "${{ secrets.CERT_PASSWORD }}"
         $exePath = ".\dist\PasswordGenerator.exe"
         & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
