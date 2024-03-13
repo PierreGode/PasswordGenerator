@@ -13,7 +13,7 @@ permissions:
 jobs:
   build-and-sign:
     runs-on: windows-latest
-    
+
     steps:
     - uses: actions/checkout@v4
 
@@ -66,18 +66,16 @@ jobs:
 
     - name: Determine Next Version and Tag
       run: |
-        $ErrorActionPreference = 'Stop'
-        $latestTag = git describe --tags --abbrev=0 --match "v*" 2>$null
-        if ($latestTag) {
-            $versionNumbers = $latestTag -replace 'v','' -split '\.'
-            $versionNumbers[2] = [int]$versionNumbers[2] + 1
-        } else {
-            $versionNumbers = @(0, 0, 0)
+        git fetch --tags
+        $latestTag = git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>$null
+        if (-not $latestTag) {
+            $latestTag = 'v0.0.0'
         }
-        $newVersion = "v" + ($versionNumbers -join '.')
+        $versionNumbers = $latestTag.TrimStart('v').Split('.')
+        $versionNumbers[2] = [int]$versionNumbers[2] + 1
+        $newVersion = "v" + $versionNumbers[0] + "." + $versionNumbers[1] + "." + $versionNumbers[2]
         git tag $newVersion
         git push origin $newVersion
-        echo "version=$newVersion" | Out-File -Append -NoNewline -FilePath $env:GITHUB_ENV
       shell: pwsh
       env:
         TOKENS: ${{ secrets.TOKENS }}
@@ -85,21 +83,9 @@ jobs:
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
-        TOKENS: ${{ secrets.TOKENS }}
+        GITHUB_TOKEN: ${{ secrets.TOKENS }}
       with:
-        tag_name: ${{ steps.versioning.outputs.version }}
-        release_name: Release ${{ steps.versioning.outputs.version }}
+        tag_name: $newVersion
+        release_name: Release $newVersion
         draft: false
         prerelease: false
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/PasswordGenerator.exe
-        asset_name: PasswordGenerator-${{ steps.versioning.outputs.version }}.exe
-        asset_content_type: application/octet-stream
-      env:
-        TOKENS: ${{ secrets.TOKENS }}
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
