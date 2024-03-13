@@ -24,7 +24,7 @@ jobs:
       with:
         python-version: "3.10"
     
-    # Your existing steps for setup, build, and sign...
+    # Insert your existing setup, build, sign, and artifact upload steps here...
 
     - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
@@ -35,19 +35,22 @@ jobs:
     - name: Determine Next Version
       run: |
         $ErrorActionPreference = 'Stop' # Make sure any error halts the script
+        
+        # Initialize the default version tag
+        $currentVersionTag = "v0.0.0"
 
         # Attempt to get the current version tag
-        $gitDescribeArgs = @('describe', '--tags', '--abbrev=0')
-        $currentVersionTag = ''
         try {
-          $currentVersionTag = git @gitDescribeArgs
+          $gitDescribeOutput = git describe --tags --abbrev=0
+          if (-not [string]::IsNullOrEmpty($gitDescribeOutput)) {
+            $currentVersionTag = $gitDescribeOutput
+          }
         } catch {
           Write-Output "No existing tags found. Starting from default version."
-          $currentVersionTag = "v0.0.0"
         }
         
         # Ensure the version string is properly formatted
-        if (-not $currentVersionTag.StartsWith('v')) {
+        if (-not [string]::IsNullOrEmpty($currentVersionTag) -and -not $currentVersionTag.StartsWith('v')) {
           $currentVersionTag = 'v0.0.0'
         }
 
