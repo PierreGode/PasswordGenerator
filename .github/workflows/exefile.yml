@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Important for version tags, ensures all history is fetched
+        fetch-depth: 0 # Ensures all history and tags are fetched
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
@@ -25,7 +25,8 @@ jobs:
         python-version: "3.10"
     
     # Insert your existing steps here for setup, build, and sign...
-
+    # Example: Install dependencies, Lint with flake8, Build package, Build executable with PyInstaller, Decode Signing Certificate, Sign the Executable
+    
     - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
       with:
@@ -33,12 +34,21 @@ jobs:
         path: dist/*.exe
     
     - name: Determine Next Version
-      id: versioning
       run: |
-        $currentVersionTag = git describe --tags --abbrev=0
+        try {
+          $currentVersionTag = git describe --tags --abbrev=0
+        } catch {
+          # If no tags are present, set a default initial version
+          $currentVersionTag = "v0.0.0"
+        }
+        
         $versionNumbers = $currentVersionTag -replace 'v','' -split '\.' | ForEach-Object { [int]$_ }
+        
+        # Increment the patch version by 1
         $versionNumbers[2]++
+        
         $newVersion = "v" + ($versionNumbers -join '.')
+        
         echo "VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
       shell: pwsh
 
@@ -55,7 +65,7 @@ jobs:
         git push origin $tagName
       shell: pwsh
       env:
-        VERSION: ${{ needs.versioning.outputs.VERSION }} # Ensure this variable is correctly set
+        VERSION: ${{ env.VERSION }}
 
     - name: Create Release
       uses: actions/create-release@v1
