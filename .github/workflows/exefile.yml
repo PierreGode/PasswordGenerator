@@ -24,31 +24,41 @@ jobs:
       with:
         python-version: "3.10"
     
-    # Insert your existing steps here for setup, build, and sign...
-    # Example: Install dependencies, Lint with flake8, Build package, Build executable with PyInstaller, Decode Signing Certificate, Sign the Executable
-    
+    # Your existing steps for setup, build, and sign...
+
     - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: signed-windows-executable
         path: dist/*.exe
-    
+
     - name: Determine Next Version
       run: |
+        $ErrorActionPreference = 'Stop' # Make sure any error halts the script
+
+        # Attempt to get the current version tag
+        $gitDescribeArgs = @('describe', '--tags', '--abbrev=0')
+        $currentVersionTag = ''
         try {
-          $currentVersionTag = git describe --tags --abbrev=0
+          $currentVersionTag = git @gitDescribeArgs
         } catch {
-          # If no tags are present, set a default initial version
+          Write-Output "No existing tags found. Starting from default version."
           $currentVersionTag = "v0.0.0"
         }
         
-        $versionNumbers = $currentVersionTag -replace 'v','' -split '\.' | ForEach-Object { [int]$_ }
+        # Ensure the version string is properly formatted
+        if (-not $currentVersionTag.StartsWith('v')) {
+          $currentVersionTag = 'v0.0.0'
+        }
+
+        $versionNumbers = $currentVersionTag.TrimStart('v') -split '\.' | ForEach-Object { [int]$_ }
         
-        # Increment the patch version by 1
+        # Increment the patch version
         $versionNumbers[2]++
         
         $newVersion = "v" + ($versionNumbers -join '.')
         
+        echo "New version: $newVersion"
         echo "VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
       shell: pwsh
 
