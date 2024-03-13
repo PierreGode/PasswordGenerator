@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-sign:
@@ -16,50 +16,63 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Ensures all history and tags are fetched
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
     
-    - name: Install dependencies
+    # Insert your existing steps here...
+
+    - name: Determine Next Version
       run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller
-        if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
+        $ErrorActionPreference = 'Stop' # Make sure any error halts the script
+        $currentVersionTag = git describe --tags --abbrev=0
+        
+        $versionNumbers = $currentVersionTag.TrimStart('v') -split '\.' | ForEach-Object { [int]$_ }
+        
+        # Increment the patch version
+        $versionNumbers[2]++
+        
+        $newVersion = "v" + ($versionNumbers -join '.')
+        
+        echo "New version: $newVersion"
+        echo "VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
       shell: pwsh
 
-    - name: Lint with flake8
+    - name: Configure Git
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
-
-    - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py
-    
-    - name: Decode Signing Certificate
-      run: |
-        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
-        $certBytes = [System.Convert]::FromBase64String($base64Cert)
-        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
       shell: pwsh
 
-    - name: Sign the Executable
+    - name: Create and Push Tag
       run: |
-        $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        $certPath = "$env:TEMP\code-signing-cert.pfx"
-        $password = "${{ secrets.CERT_PASSWORD }}"
-        $exePath = ".\dist\PasswordGenerator.exe"
-        & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+        $tagName = "${{ env.VERSION }}"
+        git tag $tagName
+        git push origin $tagName
       shell: pwsh
+      env:
+        VERSION: ${{ env.VERSION }}
 
-    - name: Upload Signed Executable Artifact
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: signed-windows-executable
-        path: dist/*.exe
+        tag_name: ${{ env.VERSION }}
+        release_name: Release ${{ env.VERSION }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/PasswordGenerator.exe
+        asset_name: PasswordGenerator-${{ env.VERSION }}.exe
+        asset_content_type: application/octet-stream
