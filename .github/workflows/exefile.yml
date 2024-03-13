@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-and-sign:
@@ -16,54 +16,84 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Ensures all history and tags are fetched
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
     
-    # Insert your existing steps here...
-
-    - name: Determine Next Version
+    - name: Install dependencies
       run: |
-        $ErrorActionPreference = 'Stop' # Make sure any error halts the script
-        $currentVersionTag = git describe --tags --abbrev=0
-        
-        $versionNumbers = $currentVersionTag.TrimStart('v') -split '\.' | ForEach-Object { [int]$_ }
-        
-        # Increment the patch version
-        $versionNumbers[2]++
-        
+        python -m pip install --upgrade pip
+        pip install flake8 pytest wheel pyinstaller
+        if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
+      shell: pwsh
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Build package
+      run: |
+        python setup.py sdist bdist_wheel
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed PasswordGenerator.py
+
+    - name: Decode Signing Certificate
+      run: |
+        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
+        $certBytes = [System.Convert]::FromBase64String($base64Cert)
+        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
+      shell: pwsh
+
+    - name: Sign the Executable
+      run: |
+        $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
+        $certPath = "$env:TEMP\code-signing-cert.pfx"
+        $password = "${{ secrets.CERT_PASSWORD }}"
+        $exePath = ".\dist\PasswordGenerator.exe"
+        & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+      shell: pwsh
+
+    - name: Upload Signed Executable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: signed-windows-executable
+        path: dist/*.exe
+
+    # New steps to increment version, create tag, and release:
+    - name: Configure Git for GitHub Actions
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+      shell: pwsh
+
+    - name: Determine Next Version and Tag
+      id: next_version
+      run: |
+        # Example to fetch latest tag and increment version
+        $latestTag = git describe --tags --abbrev=0
+        $versionNumbers = $latestTag -replace 'v','' -split '\.'
+        $versionNumbers[2] = [int]$versionNumbers[2] + 1
         $newVersion = "v" + ($versionNumbers -join '.')
-        
-        echo "New version: $newVersion"
-        echo "VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+        git tag $newVersion
+        echo "::set-output name=version::$newVersion"
       shell: pwsh
 
-    - name: Configure Git
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
+    - name: Push New Tag
+      run: git push origin ${{ steps.next_version.outputs.version }}
       shell: pwsh
 
-    - name: Create and Push Tag
-      run: |
-        $tagName = "${{ env.VERSION }}"
-        git tag $tagName
-        git push origin $tagName
-      shell: pwsh
-      env:
-        VERSION: ${{ env.VERSION }}
-
-    - name: Create Release
+    - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ env.VERSION }}
-        release_name: Release ${{ env.VERSION }}
+        tag_name: ${{ steps.next_version.outputs.version }}
+        release_name: ${{ steps.next_version.outputs.version }}
         draft: false
         prerelease: false
 
@@ -74,5 +104,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/PasswordGenerator.exe
-        asset_name: PasswordGenerator-${{ env.VERSION }}.exe
+        asset_name: PasswordGenerator-${{ steps.next_version.outputs.version }}.exe
         asset_content_type: application/octet-stream
