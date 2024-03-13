@@ -1,4 +1,5 @@
 # PasswordGenerator 2024 package builder
+
 This build generates artifact and exe file.
 <p>
   <img width="384" alt="image" src="https://github.com/PierreGode/PasswordGenerator/assets/8579922/20fa8633-7b94-44d5-98f5-461bfcfa12c1">
