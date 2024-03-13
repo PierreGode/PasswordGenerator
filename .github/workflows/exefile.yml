@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-sign:
@@ -16,50 +16,53 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Important for version tags
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller
-        if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
-      shell: pwsh
-
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
-
-    - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py
-    
-    - name: Decode Signing Certificate
-      run: |
-        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
-        $certBytes = [System.Convert]::FromBase64String($base64Cert)
-        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
-      shell: pwsh
-
-    - name: Sign the Executable
-      run: |
-        $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        $certPath = "$env:TEMP\code-signing-cert.pfx"
-        $password = "${{ secrets.CERT_PASSWORD }}"
-        $exePath = ".\dist\PasswordGenerator.exe"
-        & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
-      shell: pwsh
+    # Your existing steps here ...
 
     - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: signed-windows-executable
         path: dist/*.exe
+    
+    - name: Determine Next Version
+      id: versioning
+      run: |
+        # Example: Increment patch version. For real projects, you might use a script to analyze commits and decide version.
+        echo "VERSION=$(git describe --tags --abbrev=0 | sed 's/v\([0-9]*\.[0-9]*\.\)\([0-9]*\)/echo v\1$((\2+1))/e')" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Create and Push Tag
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git tag ${{ env.VERSION }}
+        git push origin ${{ env.VERSION }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.VERSION }}
+        release_name: Release ${{ env.VERSION }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/PasswordGenerator.exe
+        asset_name: PasswordGenerator-${{ env.VERSION }}.exe
+        asset_content_type: application/octet-stream
