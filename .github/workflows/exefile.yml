@@ -17,14 +17,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Important for version tags
+        fetch-depth: 0 # Important for version tags, ensures all history is fetched
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
     
-    # Your existing steps here ...
+    # Insert your existing steps here for setup, build, and sign...
 
     - name: Upload Signed Executable Artifact
       uses: actions/upload-artifact@v4
@@ -35,19 +35,29 @@ jobs:
     - name: Determine Next Version
       id: versioning
       run: |
-        # Example: Increment patch version. For real projects, you might use a script to analyze commits and decide version.
-        echo "VERSION=$(git describe --tags --abbrev=0 | sed 's/v\([0-9]*\.[0-9]*\.\)\([0-9]*\)/echo v\1$((\2+1))/e')" >> $GITHUB_ENV
-      shell: bash
+        $currentVersionTag = git describe --tags --abbrev=0
+        $versionNumbers = $currentVersionTag -replace 'v','' -split '\.' | ForEach-Object { [int]$_ }
+        $versionNumbers[2]++
+        $newVersion = "v" + ($versionNumbers -join '.')
+        echo "VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
+
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+      shell: pwsh
 
     - name: Create and Push Tag
       run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git tag ${{ env.VERSION }}
-        git push origin ${{ env.VERSION }}
+        $tagName = "${{ env.VERSION }}"
+        git tag $tagName
+        git push origin $tagName
+      shell: pwsh
+      env:
+        VERSION: ${{ needs.versioning.outputs.VERSION }} # Ensure this variable is correctly set
 
     - name: Create Release
-      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
