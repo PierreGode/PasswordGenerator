@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-sign:
     runs-on: windows-latest
-
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -77,14 +77,15 @@ jobs:
         $newVersion = "v" + ($versionNumbers -join '.')
         git tag $newVersion
         git push origin $newVersion
-        echo "::set-output name=version::$newVersion"
+        echo "version=$newVersion" | Out-File -Append -NoNewline -FilePath $env:GITHUB_ENV
       shell: pwsh
-      id: versioning
+      env:
+        TOKENS: ${{ secrets.TOKENS }}
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        TOKENS: ${{ secrets.TOKENS }}
       with:
         tag_name: ${{ steps.versioning.outputs.version }}
         release_name: Release ${{ steps.versioning.outputs.version }}
@@ -100,5 +101,5 @@ jobs:
         asset_name: PasswordGenerator-${{ steps.versioning.outputs.version }}.exe
         asset_content_type: application/octet-stream
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TOKENS: ${{ secrets.TOKENS }}
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
