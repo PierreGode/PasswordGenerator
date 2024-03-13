@@ -13,7 +13,7 @@ permissions:
 jobs:
   build-and-sign:
     runs-on: windows-latest
-    
+
     steps:
     - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         pyinstaller --onefile --windowed PasswordGenerator.py
-
+    
     - name: Decode Signing Certificate
       run: |
         $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
@@ -64,45 +64,41 @@ jobs:
         name: signed-windows-executable
         path: dist/*.exe
 
-    # New steps to increment version, create tag, and release:
-    - name: Configure Git for GitHub Actions
-      run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
-      shell: pwsh
-
     - name: Determine Next Version and Tag
-      id: next_version
       run: |
-        # Example to fetch latest tag and increment version
-        $latestTag = git describe --tags --abbrev=0
-        $versionNumbers = $latestTag -replace 'v','' -split '\.'
-        $versionNumbers[2] = [int]$versionNumbers[2] + 1
+        $ErrorActionPreference = 'Stop'
+        $latestTag = git describe --tags --abbrev=0 --match "v*" 2>$null
+        if ($latestTag) {
+            $versionNumbers = $latestTag -replace 'v','' -split '\.'
+            $versionNumbers[2] = [int]$versionNumbers[2] + 1
+        } else {
+            $versionNumbers = @(0, 0, 0)
+        }
         $newVersion = "v" + ($versionNumbers -join '.')
         git tag $newVersion
+        git push origin $newVersion
         echo "::set-output name=version::$newVersion"
       shell: pwsh
-
-    - name: Push New Tag
-      run: git push origin ${{ steps.next_version.outputs.version }}
-      shell: pwsh
+      id: versioning
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.next_version.outputs.version }}
-        release_name: ${{ steps.next_version.outputs.version }}
+        tag_name: ${{ steps.versioning.outputs.version }}
+        release_name: Release ${{ steps.versioning.outputs.version }}
         draft: false
         prerelease: false
-
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/PasswordGenerator.exe
-        asset_name: PasswordGenerator-${{ steps.next_version.outputs.version }}.exe
+        asset_name: PasswordGenerator-${{ steps.versioning.outputs.version }}.exe
         asset_content_type: application/octet-stream
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
