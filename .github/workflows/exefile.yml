@@ -65,6 +65,7 @@ jobs:
         path: dist/*.exe
 
     - name: Determine Next Version and Tag
+      id: versioning
       run: |
         git fetch --tags
         $latestTag = git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>$null
@@ -76,6 +77,7 @@ jobs:
         $newVersion = "v" + $versionNumbers[0] + "." + $versionNumbers[1] + "." + $versionNumbers[2]
         git tag $newVersion
         git push origin $newVersion
+        echo "newVersion=$newVersion" >> $GITHUB_ENV
       shell: pwsh
       env:
         TOKENS: ${{ secrets.TOKENS }}
@@ -83,9 +85,9 @@ jobs:
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        TOKENS: ${{ secrets.TOKENS }}
       with:
-        tag_name: $newVersion
-        release_name: Release $newVersion
+        tag_name: ${{ env.newVersion }}
+        release_name: Release ${{ env.newVersion }}
         draft: false
         prerelease: false
