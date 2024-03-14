@@ -1,23 +1,23 @@
-name: Build and Sign Executable
+name: Build, Sign, and Release Executable
 
 on:
   push:
-    branches: ["main"]
+    branches: 
+      - main
 
 permissions:
   contents: write
 
 jobs:
-  build-and-sign:
+  build-sign-and-release:
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
@@ -32,12 +32,10 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
+      run: python setup.py sdist bdist_wheel
 
     - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py
+      run: pyinstaller --onefile --windowed PasswordGenerator.py
     
     - name: Decode Signing Certificate
       run: |
@@ -55,8 +53,30 @@ jobs:
         & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
       shell: pwsh
 
-    - name: Upload Signed Executable Artifact
-      uses: actions/upload-artifact@v4
+    - name: Generate Version Tag from Date
+      id: versioning
+      run: |
+        $dateTag = "v" + (Get-Date -Format "yyyy.MM.dd")
+        echo "New version tag: $dateTag"
+        echo "VERSION_TAG=$dateTag" | Out-File -Append -FilePath $env:GITHUB_ENV
+      shell: pwsh
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: signed-windows-executable
-        path: dist/*.exe
+        tag_name: ${{ env.VERSION_TAG }}
+        release_name: Release ${{ env.VERSION_TAG }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./dist/PasswordGenerator.exe
+        asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
+        asset_content_type: application/octet-stream
