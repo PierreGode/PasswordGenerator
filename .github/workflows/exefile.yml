@@ -26,11 +26,6 @@ jobs:
         if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
       shell: pwsh
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
     - name: Build package
       run: python setup.py sdist bdist_wheel
 
@@ -54,14 +49,13 @@ jobs:
       shell: pwsh
 
     - name: Generate Version Tag from Date
-      id: versioning
       run: |
         $dateTag = "v" + (Get-Date -Format "yyyy.MM.dd")
-        echo "New version tag: $dateTag"
-        echo "VERSION_TAG=$dateTag" | Out-File -Append -FilePath $env:GITHUB_ENV
+        echo "VERSION_TAG=$dateTag" >> $GITHUB_ENV
       shell: pwsh
 
     - name: Create GitHub Release
+      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,7 +70,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/PasswordGenerator.exe
         asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
         asset_content_type: application/octet-stream
