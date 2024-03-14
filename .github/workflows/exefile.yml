@@ -1,26 +1,23 @@
-name: Windows Package Build and Cert-Signing
+name: Build, Sign, and Release Executable
 
 on:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: 
+      - main
 
 permissions:
   contents: write
 
 jobs:
-  build-and-sign:
+  build-sign-and-release:
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
@@ -35,12 +32,10 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
+      run: python setup.py sdist bdist_wheel
 
     - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py
+      run: pyinstaller --onefile --windowed PasswordGenerator.py
     
     - name: Decode Signing Certificate
       run: |
@@ -58,34 +53,30 @@ jobs:
         & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
       shell: pwsh
 
-    - name: Upload Signed Executable Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: signed-windows-executable
-        path: dist/*.exe
-
-    - name: Determine Next Version and Tag
+    - name: Generate Version Tag from Date
+      id: versioning
       run: |
-        git fetch --tags
-        $latestTag = git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>$null
-        if (-not $latestTag) {
-            $latestTag = 'v0.0.0'
-        }
-        $versionNumbers = $latestTag.TrimStart('v').Split('.')
-        $versionNumbers[2] = [int]$versionNumbers[2] + 1
-        $newVersion = "v" + $versionNumbers[0] + "." + $versionNumbers[1] + "." + $versionNumbers[2]
-        git tag $newVersion
-        git push origin $newVersion
+        $dateTag = "v" + (Get-Date -Format "yyyy.MM.dd")
+        echo "New version tag: $dateTag"
+        echo "VERSION_TAG=$dateTag" | Out-File -Append -FilePath $env:GITHUB_ENV
       shell: pwsh
-      env:
-        TOKENS: ${{ secrets.TOKENS }}
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: $newVersion
-        release_name: Release $newVersion
+        tag_name: ${{ env.VERSION_TAG }}
+        release_name: Release ${{ env.VERSION_TAG }}
         draft: false
         prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./dist/PasswordGenerator.exe
+        asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
+        asset_content_type: application/octet-stream
