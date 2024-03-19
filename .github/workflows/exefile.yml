@@ -1,4 +1,4 @@
-name: Windows Package Build, Cert-Signing, and Release
+name: Password Generator Windows Package Release
 
 on:
   pull_request:
