@@ -61,31 +61,3 @@ jobs:
       with:
         name: signed-windows-executable
         path: dist/*.exe
-
-    - name: Set Version Tag
-      run: |
-        $PRId = "${{ github.event.pull_request.number }}"
-        $date = Get-Date -Format "yyyyMMdd"
-        $versionTag = "PR${PRId}-$date"
-        echo "VERSION_TAG=$versionTag" >> $GITHUB_ENV
-      shell: pwsh
-
-    - name: Create GitHub Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.VERSION_TAG }}
-        release_name: Release ${{ env.VERSION_TAG }}
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/PasswordGenerator.exe
-        asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
-        asset_content_type: application/octet-stream
