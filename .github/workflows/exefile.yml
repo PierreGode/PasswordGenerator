@@ -65,8 +65,8 @@ jobs:
     - name: Set tag
       id: set_tag
       run: |
-        # Get the current date and minute
-        DATE_MINUTE=$(date +%Y%m%d%H%M)
+        # Get the current date and minute in the format YYYYMMDDHHmm
+        $DATE_MINUTE = Get-Date -Format "yyyyMMddHHmm"
         # Get the pull request ID
         PR_ID=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
         # Create the version tag
