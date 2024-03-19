@@ -1,87 +1,96 @@
+name: Windows Package Build, Cert-Signing, and Release
+
 on:
   pull_request:
     branches: ["main"]
+    types: [closed]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  windows-package-build-and-cert-signing:
+  build-sign-and-release:
     runs-on: windows-latest
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest wheel pyinstaller
-        if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
-      shell: pwsh
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest wheel pyinstaller
+          if (Test-Path -Path "requirements.txt") { pip install -r requirements.txt }
+        shell: pwsh
 
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed PasswordGenerator.py
-    
-    - name: Decode Signing Certificate
-      run: |
-        $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
-        $certBytes = [System.Convert]::FromBase64String($base64Cert)
-        [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
-      shell: pwsh
+      - name: Build package
+        run: |
+          python setup.py sdist bdist_wheel
 
-    - name: Sign the Executable
-      run: |
-        $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        $certPath = "$env:TEMP\code-signing-cert.pfx"
-        $password = "${{ secrets.CERT_PASSWORD }}"
-        $exePath = ".\dist\PasswordGenerator.exe"
-        & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
-      shell: pwsh
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed PasswordGenerator.py
 
-    - name: Upload Signed Executable Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: signed-windows-executable
-        path: dist/*.exe
+      - name: Decode Signing Certificate
+        run: |
+          $base64Cert = "${{ secrets.CODE_SIGNING_CERT_BASE64 }}"
+          $certBytes = [System.Convert]::FromBase64String($base64Cert)
+          [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
+        shell: pwsh
 
-    - name: Set the tag name
-      id: set_tag
-      run: echo "TAG_NAME=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
-      shell: pwsh
+      - name: Sign the Executable
+        run: |
+          $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
+          $certPath = "$env:TEMP\code-signing-cert.pfx"
+          $password = "${{ secrets.CERT_PASSWORD }}"
+          $exePath = ".\dist\PasswordGenerator.exe"
+          & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+        shell: pwsh
 
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKENS }}
-      with:
-        tag_name: ${{ env.TAG_NAME }}
-        release_name: Windows Package Build and Cert-Signing ${{ env.TAG_NAME }}
-        draft: false
-        prerelease: false
+      - name: Upload Signed Executable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows-executable
+          path: dist/*.exe
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKENS }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/PasswordGenerator.exe
-        asset_name: PasswordGenerator-${{ env.TAG_NAME }}.exe
-        asset_content_type: application/octet-stream
+      - name: Set the version tag
+        if: github.event.pull_request.merged == true
+        id: set_version_tag
+        run: |
+          $DATE=$(Get-Date -Format "yyyyMMdd")
+          $PR_ID=${{ github.event.pull_request.number }}
+          $VERSION_TAG="v${DATE}-${PR_ID}"
+          echo "VERSION_TAG=$VERSION_TAG" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Create GitHub Release
+        if: github.event.pull_request.merged == true
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          release_name: Windows Package Build and Cert-Signing ${{ env.VERSION_TAG }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        if: github.event.pull_request.merged == true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/PasswordGenerator.exe
+          asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
+          asset_content_type: application/octet-stream
