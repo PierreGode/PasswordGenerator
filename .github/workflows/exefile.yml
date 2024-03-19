@@ -62,7 +62,7 @@ jobs:
         name: signed-windows-executable
         path: dist/*.exe
 
-    - name: Set tag
+    - name: Create Tag
       id: set_tag
       run: |
         # Get the current date and minute
