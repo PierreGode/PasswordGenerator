@@ -61,3 +61,35 @@ jobs:
       with:
         name: signed-windows-executable
         path: dist/*.exe
+
+    - name: Set tag
+      id: set_tag
+      run: |
+        # Get the current date and minute
+        DATE_MINUTE=$(date +%Y%m%d%H%M)
+        # Get the pull request ID
+        PR_ID=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+        # Create the version tag
+        VERSION_TAG="v${DATE_MINUTE}-${PR_ID}"
+        echo "::set-output name=tag::$VERSION_TAG"
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKENS }}
+      with:
+        tag_name: ${{ steps.set_tag.outputs.tag }}
+        release_name: Release ${{ steps.set_tag.outputs.tag }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKENS }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/PasswordGenerator.exe
+        asset_name: PasswordGenerator-${{ steps.set_tag.outputs.tag }}.exe
+        asset_content_type: application/octet-stream
