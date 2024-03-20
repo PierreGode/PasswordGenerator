@@ -33,7 +33,7 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --noonefile --windowed PasswordGenerator.py
+          pyinstaller --windowed PasswordGenerator.py
 
       - name: Decode Signing Certificate
         run: |
