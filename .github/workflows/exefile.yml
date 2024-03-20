@@ -80,7 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TOKENS }}
         with:
           tag_name: ${{ env.VERSION_TAG }}
-          release_name: Windows Package Build and Cert-Signing ${{ env.VERSION_TAG }}
+          release_name: PasswordGenerator Windows Package${{ env.VERSION_TAG }}
           draft: false
           prerelease: false
 
