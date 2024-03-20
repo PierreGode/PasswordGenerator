@@ -64,7 +64,7 @@ jobs:
           $DATE=$(Get-Date -Format "yyyyMMdd-HHmm")
           $PR_ID=${{ github.event.pull_request.number }}
           $VERSION_TAG="v${DATE}-${PR_ID}"
-          echo "$env:VERSION_TAG=$env:VERSION_TAG" | Out-File -FilePath $env:GITHUB_STATE -Encoding utf8 -Append
+          echo "VERSION_TAG=$VERSION_TAG" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         shell: pwsh
 
       - name: Create GitHub Release
