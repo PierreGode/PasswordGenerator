@@ -4,50 +4,32 @@ import string
 import random
 import pyperclip
 import threading
-from transformers import pipeline
 
-# Splash Screen Function
-def show_splash_screen(duration, on_close_callback):
-    splash_root = tk.Tk()
-    splash_root.title("Loading...")
-    splash_root.geometry("300x150")  # Width x Height
-    center_window(splash_root, 300, 150)
-    splash_label = tk.Label(splash_root, text="Please wait, loading...", font=("Arial", 14))
-    splash_label.pack(expand=True)
-    # Close the splash screen after the background tasks are done.
-    def close_splash():
-        splash_root.destroy()
-        on_close_callback()  # Call the callback to open main window
+# Function to asynchronously load the model and generate the word pool
+def async_load_model_and_generate_pool():
+    load_model()
+    generate_word_pool()
 
-    # The after() method schedules the splash screen to close after a minimum duration.
-    # The actual closing might be delayed if the background tasks are not done.
-    splash_root.after(duration, close_splash)
-    splash_root.mainloop()
-
-def center_window(root, width, height):
-    # Calculate position x, y to center the window
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    x = (screen_width/2) - (width/2)
-    y = (screen_height/2) - (height/2)
-    root.geometry('%dx%d+%d+%d' % (width, height, x, y))
-
-# Generator initialization for lazy loading
-generator = None
-
+# Lazy loading of the generator to avoid slowing down the app startup
 def load_model():
     global generator
     if generator is None:
-        # Lazy loading of the model
+        from transformers import pipeline
         generator = pipeline('text-generation', model='distilgpt2', truncation=True)
     return generator
 
-# Generate a word pool from the model
+# Initialize generator as None for lazy loading
+generator = None
+
+# Initialize a word pool
 word_pool = []
 
+# Generate a word pool from the model output, ensuring variety
 def generate_word_pool(size=15):
     global word_pool
-    generator = load_model()  # Ensure the generator is loaded
+    # Ensure the generator is loaded before trying to generate the word pool
+    if generator is None:
+        load_model()
     prompt = " "
     generated = generator(prompt, max_length=50, num_return_sequences=size)
     for item in generated:
@@ -59,28 +41,138 @@ def generate_word_pool(size=15):
                 word_pool.append(clean_word)
     word_pool = list(set(word_pool))  # Remove duplicates
 
-def start_background_tasks(callback):
-    def background_job():
-        load_model()
+def onClickHelp():
+    messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
+
+def onClickAbout():
+    messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated with AI-based Word Pool, 2024.")
+
+def generateSentenceBasedPassword(length, include_special_chars=False):
+    if not word_pool:
         generate_word_pool()
-        callback()  # Signal when the background job is done
+    password = ""
+    while len(password) < length:
+        password += random.choice(word_pool)
+    password = password[:length]  # Ensure the desired length
+    if include_special_chars:
+        special_chars = string.punctuation
+        for _ in range(min(5, length // 5)):
+            pos = random.randint(1, len(password) - 2)
+            password = password[:pos] + random.choice(special_chars) + password[pos:]
+    return password
 
-    threading.Thread(target=background_job, daemon=True).start()
+def assessPasswordStrength(password):
+    length = len(password)
+    has_lower = any(char.islower() for char in password)
+    has_upper = any(char.isupper() for char in password)
+    has_digit = any(char.isdigit() for char in password)
+    has_special = any(char in string.punctuation for char in password)
+    
+    if length >= 12 and has_lower and has_upper and has_digit and has_special:
+        return "Very Strong"
+    elif length >= 10 and has_lower and has_upper and (has_digit or has_special):
+        return "Strong"
+    else:
+        return "Weak"
 
-# Deferred opening of the main window until the background tasks are done
-def open_main_window():
-    main_window()
+def updatePasswordStrengthDisplay(strength):
+    colors = {"Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
+    passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
 
-def main_window():
-    window = tk.Tk()
-    window.title("Password Generator")
-    window.config(padx=20, pady=20, bg="#f0f0f0")
-    center_window(window, 600, 400)
-    # Your main window code here...
-    window.mainloop()
+def passwordGenerator():
+    copyBtn.config(text="Copy to Clipboard")
+    include_special_chars = specialChars.get() == 1
+    try:
+        length = int(charInput.get())
+        if length < 10:
+            messagebox.showwarning("Invalid Input", "Password length must be at least 10.")
+            return
+    except ValueError:
+        messagebox.showwarning("Invalid Input", "Please enter a valid number.")
+        return
+    
+    # Keep generating passwords until a strong or very strong one is generated
+    strength = "Weak"
+    while strength not in ["Strong", "Very Strong"]:
+        if passwordType.get() == "Sentence":
+            password = generateSentenceBasedPassword(length, include_special_chars)
+        else:
+            password_chars = string.ascii_letters + string.digits
+            if include_special_chars:
+                password_chars += string.punctuation
+            password = "".join(random.choice(password_chars) for _ in range(length))
+        strength = assessPasswordStrength(password)
+    
+    passwordField.delete(0, tk.END)
+    passwordField.insert(0, password)
+    updatePasswordStrengthDisplay(strength)
+    
+    if copyToClipboard.get() == 1:
+        pyperclip.copy(password)
+        copyBtn.config(text="Copied!")
+
+# Start the background task for model loading and word pool generation
+def start_background_tasks():
+    threading.Thread(target=async_load_model_and_generate_pool, daemon=True).start()
+
+# GUI Setup
+window = tk.Tk()
+window.title("Password Generator")
+window.config(padx=20, pady=20, bg="#f0f0f0")
+
+menubar = tk.Menu(window)
+fileMenu = tk.Menu(menubar, tearoff=0)
+fileMenu.add_command(label="Exit", command=window.quit)
+menubar.add_cascade(label="File", menu=fileMenu)
+
+helpMenu = tk.Menu(menubar, tearoff=0)
+helpMenu.add_command(label="Help", command=onClickHelp)
+helpMenu.add_command(label="About", command=onClickAbout)
+menubar.add_cascade(label="Help", menu=helpMenu)
+
+window.config(menu=menubar)
+
+specialChars = tk.IntVar()
+copyToClipboard = tk.IntVar()
+passwordType = tk.StringVar(value="Traditional")
+
+titleLabel = tk.Label(window, text="Password Generator", bg="#f0f0f0", fg="#333333", font=("Arial", 20, "bold"))
+titleLabel.grid(row=0, column=0, columnspan=4, pady=(0,20))
+
+lengthLabel = tk.Label(window, text="Password length:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+lengthLabel.grid(row=1, column=0, sticky="w")
+
+charInput = tk.Entry(window, font=("Arial", 12), width=10)
+charInput.grid(row=1, column=1, sticky="w")
+charInput.insert(0, "12")
+
+specialCharsCheck = tk.Checkbutton(window, text="Include Special Characters", variable=specialChars, bg="#f0f0f0", font=("Arial", 10))
+specialCharsCheck.grid(row=2, column=0, columnspan=2, sticky="w")
+
+passwordTypeLabel = tk.Label(window, text="Password Type:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+passwordTypeLabel.grid(row=2, column=2, sticky="w")
+
+passwordTypeTraditional = tk.Radiobutton(window, text="Traditional", variable=passwordType, value="Traditional", bg="#f0f0f0", font=("Arial", 10))
+passwordTypeTraditional.grid(row=3, column=2, sticky="w")
+
+passwordTypeSentence = tk.Radiobutton(window, text="Sentence", variable=passwordType, value="Sentence", bg="#f0f0f0", font=("Arial", 10))
+passwordTypeSentence.grid(row=3, column=3, sticky="w")
+
+copyClipboardCheck = tk.Checkbutton(window, text="Copy to Clipboard Automatically", variable=copyToClipboard, bg="#f0f0f0", font=("Arial", 10))
+copyClipboardCheck.grid(row=4, column=0, columnspan=2, sticky="w")
+
+generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
+generateBtn.grid(row=5, column=0, columnspan=2, pady=(20,0))
+
+copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()), bg="#2196F3", fg="white", font=("Arial", 12), width=20)
+copyBtn.grid(row=5, column=2, columnspan=2, pady=(20,0))
+
+passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
+passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
+
+passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
+passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
 
 if __name__ == "__main__":
-    # Call to show the splash screen, with a minimum duration of 1500 milliseconds,
-    # and pass open_main_window as the callback to be executed once the splash and
-    # background jobs are done.
-    show_splash_screen(1500, lambda: start_background_tasks(open_main_window))
+    start_background_tasks()  # Start loading model and generating word pool in the background
+    window.mainloop()
