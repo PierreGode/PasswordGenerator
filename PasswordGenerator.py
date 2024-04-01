@@ -4,25 +4,28 @@ import string
 import random
 import pyperclip
 import threading
-
-# Function to asynchronously load the model and generate the word pool
-def async_load_model_and_generate_pool():
-    load_model()
-    generate_word_pool()
-
-# Lazy loading of the generator to avoid slowing down the app startup
-def load_model():
-    global generator
-    if generator is None:
-        from transformers import pipeline
-        generator = pipeline('text-generation', model='distilgpt2', truncation=True)
-    return generator
+from transformers import pipeline
 
 # Initialize generator as None for lazy loading
 generator = None
 
 # Initialize a word pool
 word_pool = []
+
+# Function to asynchronously load the model and generate the word pool,
+# updating the UI with the status.
+def async_load_model_and_generate_pool(status_label):
+    load_model()
+    generate_word_pool()
+    # Update the UI on completion
+    status_label.config(text="Model loaded, word pool ready.", fg="green")
+
+# Lazy loading of the generator to avoid slowing down the app startup
+def load_model():
+    global generator
+    if generator is None:
+        generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+    return generator
 
 # Generate a word pool from the model output, ensuring variety
 def generate_word_pool(size=15):
@@ -42,14 +45,15 @@ def generate_word_pool(size=15):
     word_pool = list(set(word_pool))  # Remove duplicates
 
 def onClickHelp():
-    messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
+    messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence-based password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
 
 def onClickAbout():
     messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated with AI-based Word Pool, 2024.")
 
 def generateSentenceBasedPassword(length, include_special_chars=False):
     if not word_pool:
-        generate_word_pool()
+        messagebox.showinfo("Please wait", "The word pool is still loading. Please try again in a few moments.")
+        return ""
     password = ""
     while len(password) < length:
         password += random.choice(word_pool)
@@ -91,7 +95,6 @@ def passwordGenerator():
         messagebox.showwarning("Invalid Input", "Please enter a valid number.")
         return
     
-    # Keep generating passwords until a strong or very strong one is generated
     strength = "Weak"
     while strength not in ["Strong", "Very Strong"]:
         if passwordType.get() == "Sentence":
@@ -103,6 +106,9 @@ def passwordGenerator():
             password = "".join(random.choice(password_chars) for _ in range(length))
         strength = assessPasswordStrength(password)
     
+    if not password:  # To handle the case where word pool wasn't ready
+        return
+
     passwordField.delete(0, tk.END)
     passwordField.insert(0, password)
     updatePasswordStrengthDisplay(strength)
@@ -111,9 +117,8 @@ def passwordGenerator():
         pyperclip.copy(password)
         copyBtn.config(text="Copied!")
 
-# Start the background task for model loading and word pool generation
-def start_background_tasks():
-    threading.Thread(target=async_load_model_and_generate_pool, daemon=True).start()
+def start_background_tasks(status_label):
+    threading.Thread(target=lambda: async_load_model_and_generate_pool(status_label), daemon=True).start()
 
 # GUI Setup
 window = tk.Tk()
@@ -173,6 +178,9 @@ passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
 passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
 passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
 
+modelStatusLabel = tk.Label(window, text="Loading model and generating word pool...", bg="#f0f0f0", fg="orange", font=("Arial", 10))
+modelStatusLabel.grid(row=8, column=0, columnspan=4)
+
 if __name__ == "__main__":
-    start_background_tasks()  # Start loading model and generating word pool in the background
+    start_background_tasks(modelStatusLabel)  # Passing the status label to the background task function
     window.mainloop()
