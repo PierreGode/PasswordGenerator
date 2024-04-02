@@ -1,9 +1,7 @@
 pyperclip
-pytest
-flake8
 wheel
-scikit-learn
 transformers
 torch 
 tensorflow
 tf-keras
+mdurl==0.1.2
