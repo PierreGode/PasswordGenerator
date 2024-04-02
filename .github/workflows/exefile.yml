@@ -31,9 +31,11 @@ jobs:
         run: |
           python setup.py sdist bdist_wheel
 
-      - name: Build executable with PyInstaller
+      - name: Build executables with PyInstaller
         run: |
           pyinstaller --onefile --windowed PasswordGenerator.py
+          pyinstaller --onefile --windowed PasswordGeneratorNoAI.py
+        shell: pwsh
 
       - name: Decode Signing Certificate
         run: |
@@ -42,20 +44,24 @@ jobs:
           [IO.File]::WriteAllBytes("$env:TEMP\code-signing-cert.pfx", $certBytes)
         shell: pwsh
 
-      - name: Sign the Executable
+      - name: Sign the Executables
         run: |
           $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
           $certPath = "$env:TEMP\code-signing-cert.pfx"
           $password = "${{ secrets.CERT_PASSWORD }}"
-          $exePath = ".\dist\PasswordGenerator.exe"
-          & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+          $exePaths = ".\dist\PasswordGenerator.exe", ".\dist\PasswordGeneratorNoAI.exe"
+          foreach ($exePath in $exePaths) {
+            & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+          }
         shell: pwsh
 
-      - name: Upload Signed Executable Artifact
+      - name: Upload Signed Executable Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: signed-windows-executable
-          path: dist/*.exe
+          name: signed-windows-executables
+          path: |
+            dist/PasswordGenerator.exe
+            dist/PasswordGeneratorNoAI.exe
 
       - name: Set the version tag
         if: github.event.pull_request.merged == true
@@ -79,7 +85,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
+      - name: Upload Release Assets
         if: github.event.pull_request.merged == true
         uses: actions/upload-release-asset@v1
         env:
@@ -88,4 +94,12 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/PasswordGenerator.exe
           asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
+          asset_content_type: application/octet-stream
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKENS }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/AdditionalGenerator.exe
+          asset_name: PasswordGeneratorNoAI-${{ env.VERSION_TAG }}.exe
           asset_content_type: application/octet-stream
