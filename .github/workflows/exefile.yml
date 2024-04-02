@@ -34,7 +34,7 @@ jobs:
       - name: Build executables with PyInstaller
         run: |
           pyinstaller --onefile --windowed PasswordGenerator.py
-          pyinstaller --onefile --windowed AdditionalGenerator.py # Replace with your actual second script name if applicable
+          pyinstaller --onefile --windowed PasswordGeneratorNoAI.py # Replace with your actual second script name if applicable
         shell: pwsh
 
       - name: Decode Signing Certificate
@@ -49,7 +49,7 @@ jobs:
           $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
           $certPath = "$env:TEMP\code-signing-cert.pfx"
           $password = "${{ secrets.CERT_PASSWORD }}"
-          $exePaths = ".\dist\PasswordGenerator.exe", ".\dist\AdditionalGenerator.exe"
+          $exePaths = ".\dist\PasswordGenerator.exe", ".\dist\PasswordGeneratorNoAI.exe"
           foreach ($exePath in $exePaths) {
             & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
           }
@@ -61,11 +61,11 @@ jobs:
           name: PasswordGenerator-signed-exe
           path: dist/PasswordGenerator.exe
 
-      - name: Upload Signed Executable Artifact (AdditionalGenerator.exe)
+      - name: Upload Signed Executable Artifact (PasswordGeneratorNoAI.exe)
         uses: actions/upload-artifact@v4
         with:
-          name: AdditionalGenerator-signed-exe
-          path: dist/AdditionalGenerator.exe
+          name: PasswordGeneratorNoAI-signed-exe
+          path: dist/PasswordGeneratorNoAI.exe
 
       - name: Set the version tag
         if: github.event.pull_request.merged == true
@@ -100,13 +100,13 @@ jobs:
           asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
           asset_content_type: application/octet-stream
 
-      - name: Upload Release Asset (AdditionalGenerator.exe)
+      - name: Upload Release Asset (PasswordGeneratorNoAI.exe)
         if: github.event.pull_request.merged == true
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.TOKENS }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/AdditionalGenerator.exe
-          asset_name: AdditionalGenerator-${{ env.VERSION_TAG }}.exe
+          asset_path: ./dist/PasswordGeneratorNoAI.exe
+          asset_name: PasswordGeneratorNoAI-${{ env.VERSION_TAG }}.exe
           asset_content_type: application/octet-stream
