@@ -34,7 +34,7 @@ jobs:
       - name: Build executables with PyInstaller
         run: |
           pyinstaller --onefile --windowed PasswordGenerator.py
-          pyinstaller --onefile --windowed PasswordGeneratorNoAI.py
+          pyinstaller --onefile --windowed AdditionalGenerator.py # Replace with your actual second script name if applicable
         shell: pwsh
 
       - name: Decode Signing Certificate
@@ -49,19 +49,23 @@ jobs:
           $signToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
           $certPath = "$env:TEMP\code-signing-cert.pfx"
           $password = "${{ secrets.CERT_PASSWORD }}"
-          $exePaths = ".\dist\PasswordGenerator.exe", ".\dist\PasswordGeneratorNoAI.exe"
+          $exePaths = ".\dist\PasswordGenerator.exe", ".\dist\AdditionalGenerator.exe"
           foreach ($exePath in $exePaths) {
             & $signToolPath sign /f $certPath /p $password /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
           }
         shell: pwsh
 
-      - name: Upload Signed Executable Artifacts
+      - name: Upload Signed Executable Artifact (PasswordGenerator.exe)
         uses: actions/upload-artifact@v4
         with:
-          name: signed-windows-executables
-          path: |
-            dist/PasswordGenerator.exe
-            dist/PasswordGeneratorNoAI.exe
+          name: PasswordGenerator-signed-exe
+          path: dist/PasswordGenerator.exe
+
+      - name: Upload Signed Executable Artifact (AdditionalGenerator.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdditionalGenerator-signed-exe
+          path: dist/AdditionalGenerator.exe
 
       - name: Set the version tag
         if: github.event.pull_request.merged == true
@@ -81,11 +85,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TOKENS }}
         with:
           tag_name: ${{ env.VERSION_TAG }}
-          release_name: PasswordGenerator Windows Package${{ env.VERSION_TAG }}
+          release_name: Password Generator Windows Package ${{ env.VERSION_TAG }}
           draft: false
           prerelease: false
 
-      - name: Upload Release Assets
+      - name: Upload Release Asset (PasswordGenerator.exe)
         if: github.event.pull_request.merged == true
         uses: actions/upload-release-asset@v1
         env:
@@ -95,11 +99,14 @@ jobs:
           asset_path: ./dist/PasswordGenerator.exe
           asset_name: PasswordGenerator-${{ env.VERSION_TAG }}.exe
           asset_content_type: application/octet-stream
+
+      - name: Upload Release Asset (AdditionalGenerator.exe)
+        if: github.event.pull_request.merged == true
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.TOKENS }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/AdditionalGenerator.exe
-          asset_name: PasswordGeneratorNoAI-${{ env.VERSION_TAG }}.exe
+          asset_name: AdditionalGenerator-${{ env.VERSION_TAG }}.exe
           asset_content_type: application/octet-stream
