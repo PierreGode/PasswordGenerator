@@ -1,95 +1,225 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
-import tkinter.messagebox
-import ctypes
-import os
 import string
 import random
 import pyperclip
+import threading
+from transformers import pipeline
+import time
 
+def splash_screen():
+    def simulate_loading(root):
+        for i in range(101):
+            progress_bar['value'] = i
+            root.update_idletasks()  # Update the GUI
+            time.sleep(0.05)  # Simulate loading
+        root.after(1000, lambda: close_splash(root))  # Close the splash screen after 1 second
 
-def is_admin():
-    try:
-        return os.getuid() == 0
-    except AttributeError:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    def close_splash(root):
+        root.destroy()
+        open_main_app()  # Open the main app after closing the splash screen
 
+    splash_root = tk.Tk()
+    splash_root.title("Splash Screen")
 
-def onClickhelp():
-    tkinter.messagebox.askokcancel("Password Generator Help.", "Run program as administrator to enable Copy to Clipboard")
+    # Configure window size and position
+    window_width = 300
+    window_height = 150
+    screen_width = splash_root.winfo_screenwidth()
+    screen_height = splash_root.winfo_screenheight()
+    x = (screen_width / 2) - (window_width / 2)
+    y = (screen_height / 2) - (window_height / 2)
+    splash_root.geometry("%dx%d+%d+%d" % (window_width, window_height, x, y))
 
+    # Create a label for the loading text
+    loading_label = ttk.Label(splash_root, text="Password generator loading...", font=("Arial", 12))
+    loading_label.pack(pady=10)
 
-def onClickabout():
-    tkinter.messagebox.askokcancel("Password Generator About.", "Created by Pierre Gode 2022")
+    # Create a progress bar
+    progress_bar = ttk.Progressbar(splash_root, orient="horizontal", length=200, mode="determinate")
+    progress_bar.pack(pady=10)
 
+    # Simulate loading
+    splash_root.after(100, lambda: simulate_loading(splash_root))
 
-def clear_pyper():
-    pyperclip.copy('')
+    splash_root.mainloop()
 
+def open_main_app():
+    def async_load_model_and_generate_pool(status_label):
+        load_model()
+        generate_word_pool()
+        # Update the UI on completion
+        status_label.config(text="Model loaded, word pool ready.", fg="green")
 
-def password_generator():
-    if Checkbutton1.get() == 1:
-        password_chars = string.ascii_letters + string.digits + string.punctuation
-    else:
-        password_chars = string.ascii_letters + string.digits
-    password_field.delete(0, tk.END)
-    length = int(char_input.get())
-    password = "".join([random.choice(password_chars) for _ in range(length)])
-    password_field.insert(0, password)
-    if Checkbutton2.get() == 1:
-        pyperclip.copy(password)
+    def load_model():
+        global generator
+        if generator is None:
+            generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+        return generator
 
+    def generate_word_pool(size=15):
+        global word_pool
+        # Ensure the generator is loaded before trying to generate the word pool
+        if generator is None:
+            load_model()
+        prompt = " "
+        generated = generator(prompt, max_length=50, num_return_sequences=size)
+        for item in generated:
+            sentence = item['generated_text']
+            words = sentence.split()
+            for word in words:
+                clean_word = ''.join(e for e in word if e.isalnum())
+                if clean_word:
+                    word_pool.append(clean_word)
+        word_pool = list(set(word_pool))  # Remove duplicates
 
-window = tk.Tk()
-window.title("Pierre's Password Generator")
-window.config(padx=50, pady=50, bg="#235066")
-# Please replace the following line with a local file for the icon
-# window.iconbitmap('path_to_your_icon_file.ico')
+    def onClickHelp():
+        messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence-based password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
 
-menubar = tk.Menu(window)
-filemenu = tk.Menu(menubar, tearoff=0)
-filemenu.add_separator()
-filemenu.add_command(label="Exit", command=window.quit)
-menubar.add_cascade(label="File", menu=filemenu)
+    def onClickAbout():
+        messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated with AI-based Word Pool, 2024.")
 
-helpmenu = tk.Menu(menubar, tearoff=0)
-helpmenu.add_command(label="Help Index", command=onClickhelp)
-helpmenu.add_command(label="About...", command=onClickabout)
-menubar.add_cascade(label="Help", menu=helpmenu)
+    def generateSentenceBasedPassword(length, include_special_chars=False):
+        if not word_pool:
+            messagebox.showinfo("Please wait", "The word pool is still loading. Please try again in a few moments.")
+            return ""
+        password = ""
+        while len(password) < length:
+            password += random.choice(word_pool)
+        password = password[:length]  # Ensure the desired length
+        if include_special_chars:
+            special_chars = string.punctuation
+            for _ in range(min(5, length // 5)):
+                pos = random.randint(1, len(password) - 2)
+                password = password[:pos] + random.choice(special_chars) + password[pos:]
+        return password
 
-window.config(menu=menubar)
+    def assessPasswordStrength(password):
+        length = len(password)
+        has_lower = any(char.islower() for char in password)
+        has_upper = any(char.isupper() for char in password)
+        has_digit = any(char.isdigit() for char in password)
+        has_special = any(char in string.punctuation for char in password)
+        
+        if length >= 12 and has_lower and has_upper and has_digit and has_special:
+            return "Very Strong"
+        elif length >= 10 and has_lower and has_upper and (has_digit or has_special):
+            return "Strong"
+        else:
+            return "Weak"
 
-Checkbutton1 = tk.IntVar()
-Checkbutton2 = tk.IntVar()
+    def updatePasswordStrengthDisplay(strength):
+        colors = {"Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
+        passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
 
-label_title = tk.Label(window, text="Password Generator", bg="#235066", fg="#c5d7bd", font=("Arial", 20, "bold"))
-label_title.grid(row=0, column=0, columnspan=3, pady=30)
+    def passwordGenerator():
+        copyBtn.config(text="Copy to Clipboard")
+        include_special_chars = specialChars.get() == 1
+        try:
+            length = int(charInput.get())
+            if length < 10:
+                messagebox.showwarning("Invalid Input", "Password length must be at least 10.")
+                return
+        except ValueError:
+            messagebox.showwarning("Invalid Input", "Please enter a valid number.")
+            return
+        
+        strength = "Weak"
+        while strength not in ["Strong", "Very Strong"]:
+            if passwordType.get() == "Sentence":
+                password = generateSentenceBasedPassword(length, include_special_chars)
+            else:
+                password_chars = string.ascii_letters + string.digits
+                if include_special_chars:
+                    password_chars += string.punctuation
+                password = "".join(random.choice(password_chars) for _ in range(length))
+            strength = assessPasswordStrength(password)
+        
+        if not password:  # To handle the case where word pool wasn't ready
+            return
 
-label_before_input = tk.Label(window, text="Password length:", bg="#235066", fg="#c5d7bd", font=("Arial", 15, "bold"))
-label_before_input.grid(row=1, column=0)
+        passwordField.delete(0, tk.END)
+        passwordField.insert(0, password)
+        updatePasswordStrengthDisplay(strength)
+        
+        if copyToClipboard.get() == 1:
+            pyperclip.copy(password)
+            copyBtn.config(text="Copied!")
 
-label_before_input_pass = tk.Checkbutton(window, text="Special Characters", variable=Checkbutton1, bg="#235066", fg="#c5d7bd", onvalue=1, offvalue=0, height=2, font=("Arial", 9, "bold"), width=20, pady=5)
-label_before_input_pass.grid(row=1, column=3)
+    def start_background_tasks(status_label):
+        threading.Thread(target=lambda: async_load_model_and_generate_pool(status_label), daemon=True).start()
 
-char_input = tk.Entry(window, bg="#235066", font=("Arial", 12), width=40)
-char_input.grid(row=1, column=1)
-char_input.insert(0, "12")
-char_input.focus()
+    # Global variables for model and word pool
+    global generator
+    generator = None
+    global word_pool
+    word_pool = []
 
-generate_password_button = tk.Button(window, text="Generate Password", bg="#fb743e", height=4, width=55, command=password_generator)
-generate_password_button.grid(row=4, column=0, columnspan=3, padx=50, pady=50)
+    # GUI Setup
+    window = tk.Tk()
+    window.title("Password Generator")
+    window.config(padx=20, pady=20, bg="#f0f0f0")
 
-clear_all = tk.Button(window, text="Clear clipboard", bg="#fb743e", height=2, width=11, command=clear_pyper)
-clear_all.grid(row=4, column=3)
+    menubar = tk.Menu(window)
+    fileMenu = tk.Menu(menubar, tearoff=0)
+    fileMenu.add_command(label="Exit", command=window.quit)
+    menubar.add_cascade(label="File", menu=fileMenu)
 
-password_field = tk.Entry(window, bg="#285c75", font=("Arial", 15, "bold"), width=40)
-password_field.grid(row=5, column=0, columnspan=3)
-password_field.bind('<Control-v>', lambda _: 'break')
-password_field.bind('<Control-c>', lambda _: 'break')
-password_field.bind('<BackSpace>', lambda _: 'break')
+    helpMenu = tk.Menu(menubar, tearoff=0)
+    helpMenu.add_command(label="Help", command=onClickHelp)
+    helpMenu.add_command(label="About", command=onClickAbout)
+    menubar.add_cascade(label="Help", menu=helpMenu)
 
-admin_status = is_admin()
-coptoclip = tk.Checkbutton(window, text="Copy to Clipboard", variable=Checkbutton2, bg="#235066", fg="#c5d7bd", onvalue=1, offvalue=0, height=2, font=("Arial", 9, "bold"), width=20, pady=5, state=tk.NORMAL if admin_status else tk.DISABLED)
-coptoclip.grid(row=1, column=2)
+    window.config(menu=menubar)
 
-window.mainloop()
+    specialChars = tk.IntVar()
+    copyToClipboard = tk.IntVar()
+    passwordType = tk.StringVar(value="Traditional")
+
+    titleLabel = tk.Label(window, text="Password Generator", bg="#f0f0f0", fg="#333333", font=("Arial", 20, "bold"))
+    titleLabel.grid(row=0, column=0, columnspan=4, pady=(0,20))
+
+    lengthLabel = tk.Label(window, text="Password length:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+    lengthLabel.grid(row=1, column=0, sticky="w")
+
+    charInput = tk.Entry(window, font=("Arial", 12), width=10)
+    charInput.grid(row=1, column=1, sticky="w")
+    charInput.insert(0, "12")
+
+    specialCharsCheck = tk.Checkbutton(window, text="Include Special Characters", variable=specialChars, bg="#f0f0f0", font=("Arial", 10))
+    specialCharsCheck.grid(row=2, column=0, columnspan=2, sticky="w")
+
+    passwordTypeLabel = tk.Label(window, text="Password Type:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+    passwordTypeLabel.grid(row=2, column=2, sticky="w")
+
+    passwordTypeTraditional = tk.Radiobutton(window, text="Traditional", variable=passwordType, value="Traditional", bg="#f0f0f0", font=("Arial", 10))
+    passwordTypeTraditional.grid(row=3, column=2, sticky="w")
+
+    passwordTypeSentence = tk.Radiobutton(window, text="Sentence", variable=passwordType, value="Sentence", bg="#f0f0f0", font=("Arial", 10))
+    passwordTypeSentence.grid(row=3, column=3, sticky="w")
+
+    copyClipboardCheck = tk.Checkbutton(window, text="Copy to Clipboard Automatically", variable=copyToClipboard, bg="#f0f0f0", font=("Arial", 10))
+    copyClipboardCheck.grid(row=4, column=0, columnspan=2, sticky="w")
+
+    generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
+    generateBtn.grid(row=5, column=0, columnspan=2, pady=(20,0))
+
+    copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()), bg="#2196F3", fg="white", font=("Arial", 12), width=20)
+    copyBtn.grid(row=5, column=2, columnspan=2, pady=(20,0))
+
+    passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
+    passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
+
+    passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
+    passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
+
+    modelStatusLabel = tk.Label(window, text="Loading model and generating word pool...", bg="#f0f0f0", fg="orange", font=("Arial", 10))
+    modelStatusLabel.grid(row=8, column=0, columnspan=4)
+
+    if __name__ == "__main__":
+        start_background_tasks(modelStatusLabel)  # Passing the status label to the background task function
+        window.mainloop()
+
+# Start with the splash screen
+splash_screen()
