@@ -4,34 +4,6 @@ from tkinter import messagebox
 import string
 import random
 import pyperclip
-import time
-
-def splash_screen():
-    def simulate_loading(root):
-        for i in range(101):
-            progress_bar['value'] = i
-            root.update_idletasks()
-            time.sleep(0.01)  # Reduced time to speed up splash screen
-        root.after(100, lambda: close_splash(root))
-
-    def close_splash(root):
-        root.destroy()
-        open_main_app()
-
-    splash_root = tk.Tk()
-    splash_root.title("Splash Screen")
-    window_width, window_height = 300, 150
-    screen_width, screen_height = splash_root.winfo_screenwidth(), splash_root.winfo_screenheight()
-    x, y = (screen_width / 2) - (window_width / 2), (screen_height / 2) - (window_height / 2)
-    splash_root.geometry(f"{window_width}x{window_height}+{int(x)}+{int(y)}")
-
-    loading_label = ttk.Label(splash_root, text="Password generator loading...", font=("Arial", 12))
-    loading_label.pack(pady=10)
-    progress_bar = ttk.Progressbar(splash_root, orient="horizontal", length=200, mode="determinate")
-    progress_bar.pack(pady=10)
-
-    splash_root.after(100, lambda: simulate_loading(splash_root))
-    splash_root.mainloop()
 
 def open_main_app():
     def onClickHelp():
@@ -137,4 +109,4 @@ def open_main_app():
     window.mainloop()
 
 if __name__ == "__main__":
-    splash_screen()
+    open_main_app()
