@@ -1,7 +1,7 @@
 # PasswordGenerator 2024 package builder
 
 This build generates an artifact and 2 exe files.
-one lighter windows app with random generation, and one with 20 sec load time due to loasing of transformers.
+one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
 <p>
 The heavier app has the addition of LLM sentence generation + "scramble", this means that everthing is processed on your own computer.
 
