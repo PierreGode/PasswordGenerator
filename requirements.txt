@@ -5,3 +5,4 @@ torch
 tensorflow
 tf-keras
 mdurl==0.1.2
+flake8
