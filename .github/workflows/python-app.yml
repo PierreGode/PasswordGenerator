@@ -2,9 +2,9 @@ name: Build Artifacts
 
 on:
   push:
-    branches: ["main"]
+    branches: ["null"]
   pull_request:
-    branches: ["main"]
+    branches: ["null"]
 
 permissions:
   contents: read
