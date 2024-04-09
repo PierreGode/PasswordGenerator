@@ -55,7 +55,7 @@ def open_main_app():
     def load_model():
         global generator
         if generator is None:
-            generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+            generator = pipeline('text-generation', model='tiny-text-gen-model', truncation=True)
         return generator
 
     def generate_word_pool(size=15):
