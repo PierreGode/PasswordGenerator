@@ -22,7 +22,7 @@ def load_model():
 generator = None
 
 # Initialize a word pool
-word_pool = []
+word_pool = []s<zdvs<zdv<sdv s<df sd gsdf
 
 # Generate a word pool from the model output, ensuring variety
 def generate_word_pool(size=15):
