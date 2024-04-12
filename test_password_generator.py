@@ -7,6 +7,7 @@ import string
 import random
 import pyperclip
 
+
 def is_admin():
     try:
         return os.getuid() == 0
