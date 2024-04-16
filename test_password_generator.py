@@ -7,25 +7,20 @@ import string
 import random
 import pyperclip
 
-
 def is_admin():
     try:
         return os.getuid() == 0
     except AttributeError:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
 
-
 def onClickhelp():
     tkinter.messagebox.askokcancel("Password Generator Help.", "Run program as administrator to enable Copy to Clipboard")
-
 
 def onClickabout():
     tkinter.messagebox.askokcancel("Password Generator About.", "Created by Pierre Gode 2022")
 
-
 def clear_pyper():
     pyperclip.copy('')
-
 
 def password_generator():
     if Checkbutton1.get() == 1:
@@ -38,7 +33,6 @@ def password_generator():
     password_field.insert(0, password)
     if Checkbutton2.get() == 1:
         pyperclip.copy(password)
-
 
 window = tk.Tk()
 window.title("Pierre's Password Generator")
@@ -91,5 +85,4 @@ password_field.bind('<BackSpace>', lambda _: 'break')
 admin_status = is_admin()
 coptoclip = tk.Checkbutton(window, text="Copy to Clipboard", variable=Checkbutton2, bg="#235066", fg="#c5d7bd", onvalue=1, offvalue=0, height=2, font=("Arial", 9, "bold"), width=20, pady=5, state=tk.NORMAL if admin_status else tk.DISABLED)
 coptoclip.grid(row=1, column=2)
-
 window.mainloop()
