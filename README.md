@@ -1,4 +1,4 @@
-# PasswordGenerator 2024 package builder
+# PasswordGenerator 2024 package builder.
 
 This build generates an artifact and 2 exe files.
 one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
