@@ -7,7 +7,7 @@ import threading
 
 
 # Function to asynchronously load the model and generate the word pool
-def async_load_model_and_generate_pool():
+defff async_load_model_and_generate_pool():
     load_model()
     generate_word_pool()
 
