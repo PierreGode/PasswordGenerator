@@ -5,7 +5,9 @@ on:
     types:
       - opened
       - synchronize
-permissions: write-all
+
+permissions: read-all
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -15,8 +17,17 @@ jobs:
 
       - name: AI Code Reviewer
         uses: freeedcom/ai-codereviewer@v2.7.0
+        id: ai-review
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_MODEL: "gpt-4-turbo-2024-04-09" # Optional: defaults to "gpt-4"
-          exclude: "**/*.json, **/*.md" # Optional: exclude patterns separated by commas
+          OPENAI_API_MODEL: "gpt-4-turbo-2024-04-09"
+          exclude: "**/*.json, **/*.md"
+
+      - name: Check for Comments and Fail if Found
+        run: |
+          # Assuming the AI Reviewer sets a flag in outputs if a comment is made
+          if [[ "${{ steps.ai-review.outputs.comment_made }}" == "true" ]]; then
+            echo "Comment was made due to code issues."
+            exit 1
+          fi
