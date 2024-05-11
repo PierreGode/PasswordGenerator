@@ -5,7 +5,6 @@ import random
 import pyperclip
 import threading
 
-
 # Function to asynchronously load the model and generate the word pool
 def async_load_model_and_generate_pool():
     load_model()
@@ -26,9 +25,8 @@ generator = None
 word_pool = []
 
 # Generate a word pool from the model output, ensuring variety
-def generate_word_pool(size=15):
-    global word_pool
-    # Ensure the generator is loaded before trying to generate the word pool
+def generate_word_pool(size=5):
+    global word_pool 
     if generator is None:
         load_model()
     prompt = " "
@@ -40,7 +38,7 @@ def generate_word_pool(size=15):
             clean_word = ''.join(e for e in word if e.isalnum())
             if clean_word:
                 word_pool.append(clean_word)
-    word_pool = list(set(word_pool))  # Remove duplicates
+    word_pool = list(set(word_pool))
 
 def onClickHelp():
     messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
@@ -91,8 +89,6 @@ def passwordGenerator():
     except ValueError:
         messagebox.showwarning("Invalid Input", "Please enter a valid number.")
         return
-    
-    # Keep generating passwords until a strong or very strong one is generated
     strength = "Weak"
     while strength not in ["Strong", "Very Strong"]:
         if passwordType.get() == "Sentence":
