@@ -1,4 +1,4 @@
-import tkinter as tk
+impor t tkinter as tk
 from tkinter import messagebox
 import tkinter.messagebox
 import ctypes
