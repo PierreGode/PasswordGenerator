@@ -3,7 +3,7 @@ from tkinter import messagebox
 import string
 import random
 import pyperclip
-import threading
+import thread ing
 
 
 # Function to asynchronously load the model and generate the word pool
