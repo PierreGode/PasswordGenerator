@@ -5,7 +5,6 @@ import random
 import pyperclip
 import threading
 
-
 # Function to asynchronously load the model and generate the word pool
 def async_load_model_and_generate_pool():
     load_model()
@@ -26,7 +25,7 @@ generator = None
 word_pool = []
 
 # Generate a word pool from the model output, ensuring variety
-def generate_word_pool(size=15):
+def generate_word_pool(size=5):
     global word_pool
     # Ensure the generator is loaded before trying to generate the word pool
     if generator is None:
