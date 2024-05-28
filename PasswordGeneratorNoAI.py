@@ -8,17 +8,14 @@ import pyperclip
 def open_main_app():
     def onClickHelp():
         messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters and auto-copying to clipboard.\n3. Click 'Generate Password'.")
-
     def onClickAbout():
         messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.")
-
     def generatePassword(length, include_special_chars=False):
         password_chars = string.ascii_letters + string.digits
         if include_special_chars:
             password_chars += string.punctuation
         password = "".join(random.choice(password_chars) for _ in range(length))
         return password
-
     def assessPasswordStrength(password):
         length = len(password)
         has_lower = any(char.islower() for char in password)
@@ -62,17 +59,14 @@ def open_main_app():
     window = tk.Tk()
     window.title("Password Generator")
     window.config(padx=20, pady=20, bg="#f0f0f0")
-
     menubar = tk.Menu(window)
     fileMenu = tk.Menu(menubar, tearoff=0)
     fileMenu.add_command(label="Exit", command=window.quit)
     menubar.add_cascade(label="File", menu=fileMenu)
-
     helpMenu = tk.Menu(menubar, tearoff=0)
     helpMenu.add_command(label="Help", command=onClickHelp)
     helpMenu.add_command(label="About", command=onClickAbout)
     menubar.add_cascade(label="Help", menu=helpMenu)
-
     window.config(menu=menubar)
 
     specialChars = tk.IntVar()
@@ -110,3 +104,4 @@ def open_main_app():
 
 if __name__ == "__main__":
     open_main_app()
+    
