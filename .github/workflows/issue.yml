@@ -1,23 +1,28 @@
-name: Create PR to Solve an Issue Using ChatGPT
-
 on:
-  push:
-    branches:
-      - main
+  issues:
+    types: [labeled, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
-  create-pr:
+  Creating-PR-using-AIPR:
+    if: ${{ (github.event_name == 'issues' && 
+    contains ( github.event.label.name, 'AIPR')) || 
+    (github.event_name == 'issue_comment' && 
+    github.event.issue.pull_request &&
+    contains( github.event.comment.body, 'Create PR with AIPR 🚀')) }}
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Creates a PR to solve an issue using ChatGPT
-        uses: alexanmtz/AIPR@v0.2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Add any other required inputs here
-
-      # Additional steps can be added here if needed
+    - name: Executing AIPR action
+      uses: alexanmtz/AIPR@main
+      with:
+        openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        openai_tokens: 200 #default is 200
+        target_branch: main
+        file_chunks: 10000 # split processing in chunks
