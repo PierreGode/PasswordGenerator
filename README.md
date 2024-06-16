@@ -1,5 +1,7 @@
 # PasswordGenerator 2024 package builder.
 
+![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg)
+
 This build generates an artifact and 2 exe files.
 one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
 <p>
