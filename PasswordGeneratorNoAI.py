@@ -4,19 +4,33 @@ from tkinter import messagebox
 import string
 import random
 import pyperclip
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def open_main_app():
+    logging.info("Opening main application window")
+    
     def onClickHelp():
+        logging.info("Help button clicked")
         messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters and auto-copying to clipboard.\n3. Click 'Generate Password'.")
+    
     def onClickAbout():
+        logging.info("About button clicked")
         messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.")
+    
     def generatePassword(length, include_special_chars=False):
+        logging.info(f"Generating password with length {length} and special characters {'included' if include_special_chars else 'not included'}")
         password_chars = string.ascii_letters + string.digits
         if include_special_chars:
             password_chars += string.punctuation
         password = "".join(random.choice(password_chars) for _ in range(length))
+        logging.debug(f"Generated password: {password}")
         return password
+    
     def assessPasswordStrength(password):
+        logging.info(f"Assessing password strength for password: {password}")
         length = len(password)
         has_lower = any(char.islower() for char in password)
         has_upper = any(char.isupper() for char in password)
@@ -31,14 +45,17 @@ def open_main_app():
             return "Weak"
 
     def passwordGenerator():
+        logging.info("Generate Password button clicked")
         copyBtn.config(text="Copy to Clipboard")
         include_special_chars = specialChars.get() == 1
         try:
             length = int(charInput.get())
             if length < 10:
+                logging.warning("Invalid input: Password length must be at least 10.")
                 messagebox.showwarning("Invalid Input", "Password length must be at least 10.")
                 return
         except ValueError:
+            logging.warning("Invalid input: Non-numeric value entered for password length")
             messagebox.showwarning("Invalid Input", "Please enter a valid number.")
             return
 
@@ -50,15 +67,21 @@ def open_main_app():
         
         if copyToClipboard.get() == 1:
             pyperclip.copy(password)
+            logging.info("Password copied to clipboard")
             copyBtn.config(text="Copied!")
 
     def updatePasswordStrengthDisplay(strength):
+        logging.info(f"Updating password strength display: {strength}")
         colors = {"Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
         passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
 
+    # Create the main window
     window = tk.Tk()
     window.title("Password Generator")
     window.config(padx=20, pady=20, bg="#f0f0f0")
+    logging.info("Main window created")
+
+    # Set up the menu bar
     menubar = tk.Menu(window)
     fileMenu = tk.Menu(menubar, tearoff=0)
     fileMenu.add_command(label="Exit", command=window.quit)
@@ -68,10 +91,13 @@ def open_main_app():
     helpMenu.add_command(label="About", command=onClickAbout)
     menubar.add_cascade(label="Help", menu=helpMenu)
     window.config(menu=menubar)
+    logging.info("Menu bar set up")
 
+    # Define IntVar for Checkbuttons
     specialChars = tk.IntVar()
     copyToClipboard = tk.IntVar()
 
+    # Create and place the widgets
     titleLabel = tk.Label(window, text="Password Generator", bg="#f0f0f0", fg="#333333", font=("Arial", 20, "bold"))
     titleLabel.grid(row=0, column=0, columnspan=4, pady=(0,20))
 
@@ -100,8 +126,12 @@ def open_main_app():
     passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
     passwordStrengthLabel.grid(row=6, column=0, columnspan=4)
 
+    logging.info("Widgets created and placed in the window")
+
+    # Run the application
     window.mainloop()
+    logging.info("Application main loop started")
 
 if __name__ == "__main__":
+    logging.info("Starting the application")
     open_main_app()
-    
