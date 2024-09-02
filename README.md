@@ -1,6 +1,7 @@
 # PasswordGenerator 2024 package builder.
 
-![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg) ![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/bandit.yml/badge.svg) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/PierreGode/PasswordGenerator)](https://github.com/PierreGode/PasswordGenerator/releases)
+![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg) ![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/bandit.yml/badge.svg) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/PierreGode/PasswordGenerator)](https://github.com/PierreGode/PasswordGenerator/releases) [![GitHub All Releases](https://img.shields.io/github/downloads/PierreGode/PasswordGenerator/total)](https://github.com/PierreGode/PasswordGenerator/releases)
+
 
 
 This build generates an artifact and 2 exe files.
