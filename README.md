@@ -1,10 +1,7 @@
 # PasswordGenerator 2024 package builder.
 
-![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg)
+![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg) ![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/bandit.yml/badge.svg) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/PierreGode/PasswordGenerator)](https://github.com/PierreGode/PasswordGenerator/releases)
 
-![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/bandit.yml/badge.svg)
-
-![Latest Release](https://img.shields.io/github/v/release/PierreGode/PasswordGenerator?sort=semver&style=for-the-badge)
 
 This build generates an artifact and 2 exe files.
 one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
