@@ -1,0 +1,20 @@
+name: Swap to Production
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  swap_to_prod:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Pre-Approval for Slot Swap
+      run: echo "Waiting for approval to swap slots..."
+      continue-on-error: true
+      if: ${{ github.event.inputs.approval == 'true' }}
+
+    - name: Swap to Production Slot
+      if: ${{ github.event.inputs.approval == 'true' }}
+      run: |
+        # Your slot swap script here
+        ./swap-to-prod.sh
