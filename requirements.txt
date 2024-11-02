@@ -6,3 +6,4 @@ tensorflow
 tf-keras
 mdurl==0.1.2
 flake8
+werkzeug>=3.0.6 # not directly required, pinned by Snyk to avoid a vulnerability
