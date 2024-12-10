@@ -1,22 +1,102 @@
-name: GPTcode-reviewer
-
+name: PR Summary and Issues Check
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-permissions: write-all
+    types: [opened, synchronize, reopened]
+
 jobs:
-  review:
+  summarize_and_check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      - name: GPTcode-reviewer
-        uses: PierreGode/GPTcode-reviewer@PR-LOG
+      - name: Set Up Python
+        uses: actions/setup-python@v4
         with:
-          GITHUB_TOKEN: ${{ secrets.G_TOKEN }}
+          python-version: '3.9'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run AI Analysis
+        env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_MODEL: "gpt-4o-mini" # Optional: defaults to "gpt-4"
-          exclude: "**/*.json, **/*.md" # Optional: exclude patterns separated by commas
+          GITHUB_TOKEN: ${{ secrets.G_TOKEN }}
+        run: |
+          python - <<EOF
+          import os
+          import requests
+          import json
+
+          # Gather GitHub event details
+          event_path = os.environ.get('GITHUB_EVENT_PATH')
+          with open(event_path, 'r') as f:
+              event = json.load(f)
+
+          # Extract PR and repo details
+          pr_number = event['pull_request']['number']
+          repo_full_name = event['repository']['full_name']
+          token = os.environ.get('GITHUB_TOKEN')
+          openai_key = os.environ.get('OPENAI_API_KEY')
+
+          # Get PR diff
+          headers = {
+              'Authorization': f'token {token}',
+              'Accept': 'application/vnd.github.v3.diff',
+          }
+          diff_url = event['pull_request']['url'] + "/files"
+          pr_files = requests.get(diff_url, headers=headers).json()
+
+          diff_text = ""
+          for fdata in pr_files:
+              filename = fdata['filename']
+              patch = fdata.get('patch', '')
+              diff_text += f"File: {filename}\\nPatch:\\n{patch}\\n\\n"
+
+          # Call OpenAI for summary
+          summary_prompt = f"Summarize the following pull request changes in a concise, technical manner:\\n\\n{diff_text}"
+          ai_headers = {"Content-Type": "application/json", "Authorization": f"Bearer {openai_key}"}
+          data = {
+              "model": "gpt-4o-mini",
+              "messages": [{"role": "user", "content": summary_prompt}],
+              "temperature": 0.7
+          }
+          response = requests.post("https://api.openai.com/v1/chat/completions", headers=ai_headers, json=data)
+          response.raise_for_status()
+          summary = response.json()['choices'][0]['message']['content'].strip()
+
+          # Post AI Pull Request Summary
+          comment_url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+          summary_comment = {
+              "body": f"**AI Pull Request Summary:**\\n{summary}"
+          }
+          summary_response = requests.post(comment_url, headers={'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}, json=summary_comment)
+          summary_response.raise_for_status()
+
+          # Call OpenAI for code issue checks
+          issues_prompt = f"Review the following code changes for potential issues, such as syntax errors, missing brackets, common pitfalls, or bad practices. Provide detailed comments for each issue:\\n\\n{diff_text}"
+          data_issues = {
+              "model": "gpt-4o-mini",
+              "messages": [{"role": "user", "content": issues_prompt}],
+              "temperature": 0.7
+          }
+          issues_response = requests.post("https://api.openai.com/v1/chat/completions", headers=ai_headers, json=data_issues)
+          issues_response.raise_for_status()
+          issues = issues_response.json()['choices'][0]['message']['content'].strip()
+
+          # Only post comments if there are actionable issues
+          if "no issues found" not in issues.lower() and issues.strip():
+              issues_list = issues.split("\\n- ")  # Assuming issues are returned as a list prefixed with '- '
+              for issue in issues_list:
+                  if issue.strip():
+                      issue_comment = {
+                          "body": f"**AI Code Issue Check:**\\n{issue.strip()}"
+                      }
+                      issue_response = requests.post(comment_url, headers={'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}, json=issue_comment)
+                      issue_response.raise_for_status()
+              print("Code issues found and comments posted.")
+          else:
+              print("No actionable code issues found.")
+          EOF
