@@ -4,7 +4,11 @@ import string
 import random
 import pyperclip
 import threading
+from transformers import pipeline
 
+# Initialize global variables
+generator = None
+word_pool = set()
 
 # Function to asynchronously load the model and generate the word pool
 def async_load_model_and_generate_pool():
@@ -15,51 +19,61 @@ def async_load_model_and_generate_pool():
 def load_model():
     global generator
     if generator is None:
-        from transformers import pipeline
-        generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+        try:
+            generator = pipeline('text-generation', model='distilgpt2', truncation=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load the model: {e}")
     return generator
-
-# Initialize generator as None for lazy loading
-generator = None
-
-# Initialize a word pool
-word_pool = []
 
 # Generate a word pool from the model output, ensuring variety
 def generate_word_pool(size=15):
     global word_pool
-    # Ensure the generator is loaded before trying to generate the word pool
     if generator is None:
         load_model()
-    prompt = " "
-    generated = generator(prompt, max_length=50, num_return_sequences=size)
-    for item in generated:
-        sentence = item['generated_text']
-        words = sentence.split()
-        for word in words:
-            clean_word = ''.join(e for e in word if e.isalnum())
-            if clean_word:
-                word_pool.append(clean_word)
-    word_pool = list(set(word_pool))  # Remove duplicates
+    prompt = "Generate a list of diverse words: "
+    try:
+        generated = generator(prompt, max_length=50, num_return_sequences=size, clean_up_tokenization_spaces=True)
+        # Use set comprehension for uniqueness and efficiency
+        new_words = {
+            ''.join(filter(str.isalnum, word)) 
+            for item in generated 
+            for word in item['generated_text'].split()
+            if ''.join(filter(str.isalnum, word))
+        }
+        word_pool.update(new_words)
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to generate word pool: {e}")
 
 def onClickHelp():
-    messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters, sentence for password, and auto-copying to clipboard.\n3. Click 'Generate Password'.")
+    messagebox.showinfo(
+        "Password Generator Help",
+        "1. Choose password length (minimum 10 characters).\n"
+        "2. Select options for including special characters, sentence for password, and auto-copying to clipboard.\n"
+        "3. Click 'Generate Password'."
+    )
 
 def onClickAbout():
-    messagebox.showinfo("About Password Generator", "Created by Pierre Gode, 2022.\nUpdated with AI-based Word Pool, 2024.")
+    messagebox.showinfo(
+        "About Password Generator",
+        "Created by Pierre Gode, 2022.\nUpdated with AI-based Word Pool, 2024."
+    )
 
 def generateSentenceBasedPassword(length, include_special_chars=False):
     if not word_pool:
         generate_word_pool()
-    password = ""
-    while len(password) < length:
-        password += random.choice(word_pool)
+    if not word_pool:
+        messagebox.showwarning("Word Pool Unavailable", "Word pool is not ready. Please try again shortly.")
+        return ""
+    password = ''.join(random.choices(tuple(word_pool), k=length))
     password = password[:length]  # Ensure the desired length
     if include_special_chars:
         special_chars = string.punctuation
-        for _ in range(min(5, length // 5)):
-            pos = random.randint(1, len(password) - 2)
-            password = password[:pos] + random.choice(special_chars) + password[pos:]
+        num_special = max(1, length // 5)
+        password = list(password)
+        for _ in range(num_special):
+            pos = random.randint(0, len(password) - 1)
+            password[pos] = random.choice(special_chars)
+        password = ''.join(password)
     return password
 
 def assessPasswordStrength(password):
@@ -78,10 +92,10 @@ def assessPasswordStrength(password):
 
 def updatePasswordStrengthDisplay(strength):
     colors = {"Weak": "#ff9900", "Strong": "#00ff00", "Very Strong": "#006400"}
-    passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors[strength])
+    passwordStrengthLabel.config(text=f"Password Strength: {strength}", fg=colors.get(strength, "#333333"))
 
 def passwordGenerator():
-    copyBtn.config(text="Copy to Clipboard")
+    copyBtn.config(text="Copy to Clipboard", state="disabled")
     include_special_chars = specialChars.get() == 1
     try:
         length = int(charInput.get())
@@ -92,27 +106,29 @@ def passwordGenerator():
         messagebox.showwarning("Invalid Input", "Please enter a valid number.")
         return
     
-    # Keep generating passwords until a strong or very strong one is generated
-    strength = "Weak"
-    while strength not in ["Strong", "Very Strong"]:
-        if passwordType.get() == "Sentence":
-            password = generateSentenceBasedPassword(length, include_special_chars)
-        else:
-            password_chars = string.ascii_letters + string.digits
-            if include_special_chars:
-                password_chars += string.punctuation
-            password = "".join(random.choice(password_chars) for _ in range(length))
-        strength = assessPasswordStrength(password)
+    # Generate password based on selected type
+    if passwordType.get() == "Sentence":
+        password = generateSentenceBasedPassword(length, include_special_chars)
+    else:
+        password_chars = string.ascii_letters + string.digits
+        if include_special_chars:
+            password_chars += string.punctuation
+        password = ''.join(random.choices(password_chars, k=length))
     
+    # Assess strength
+    strength = assessPasswordStrength(password)
+    
+    # Update UI
     passwordField.delete(0, tk.END)
     passwordField.insert(0, password)
     updatePasswordStrengthDisplay(strength)
     
-    if copyToClipboard.get() == 1:
+    if copyToClipboard.get() == 1 and password:
         pyperclip.copy(password)
-        copyBtn.config(text="Copied!")
+        copyBtn.config(text="Copied!", state="normal")
+    else:
+        copyBtn.config(state="normal")
 
-# Start the background task for model loading and word pool generation
 def start_background_tasks():
     threading.Thread(target=async_load_model_and_generate_pool, daemon=True).start()
 
@@ -133,45 +149,78 @@ menubar.add_cascade(label="Help", menu=helpMenu)
 
 window.config(menu=menubar)
 
+# Variables
 specialChars = tk.IntVar()
 copyToClipboard = tk.IntVar()
 passwordType = tk.StringVar(value="Traditional")
 
-titleLabel = tk.Label(window, text="Password Generator", bg="#f0f0f0", fg="#333333", font=("Arial", 20, "bold"))
-titleLabel.grid(row=0, column=0, columnspan=4, pady=(0,20))
+# Widgets
+titleLabel = tk.Label(
+    window, text="Password Generator", bg="#f0f0f0", fg="#333333",
+    font=("Arial", 20, "bold")
+)
+titleLabel.grid(row=0, column=0, columnspan=4, pady=(0, 20))
 
-lengthLabel = tk.Label(window, text="Password length:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+lengthLabel = tk.Label(
+    window, text="Password length:", bg="#f0f0f0", fg="#333333",
+    font=("Arial", 12)
+)
 lengthLabel.grid(row=1, column=0, sticky="w")
 
 charInput = tk.Entry(window, font=("Arial", 12), width=10)
 charInput.grid(row=1, column=1, sticky="w")
 charInput.insert(0, "12")
 
-specialCharsCheck = tk.Checkbutton(window, text="Include Special Characters", variable=specialChars, bg="#f0f0f0", font=("Arial", 10))
+specialCharsCheck = tk.Checkbutton(
+    window, text="Include Special Characters", variable=specialChars,
+    bg="#f0f0f0", font=("Arial", 10)
+)
 specialCharsCheck.grid(row=2, column=0, columnspan=2, sticky="w")
 
-passwordTypeLabel = tk.Label(window, text="Password Type:", bg="#f0f0f0", fg="#333333", font=("Arial", 12))
+passwordTypeLabel = tk.Label(
+    window, text="Password Type:", bg="#f0f0f0", fg="#333333",
+    font=("Arial", 12)
+)
 passwordTypeLabel.grid(row=2, column=2, sticky="w")
 
-passwordTypeTraditional = tk.Radiobutton(window, text="Traditional", variable=passwordType, value="Traditional", bg="#f0f0f0", font=("Arial", 10))
+passwordTypeTraditional = tk.Radiobutton(
+    window, text="Traditional", variable=passwordType, value="Traditional",
+    bg="#f0f0f0", font=("Arial", 10)
+)
 passwordTypeTraditional.grid(row=3, column=2, sticky="w")
 
-passwordTypeSentence = tk.Radiobutton(window, text="Sentence", variable=passwordType, value="Sentence", bg="#f0f0f0", font=("Arial", 10))
+passwordTypeSentence = tk.Radiobutton(
+    window, text="Sentence", variable=passwordType, value="Sentence",
+    bg="#f0f0f0", font=("Arial", 10)
+)
 passwordTypeSentence.grid(row=3, column=3, sticky="w")
 
-copyClipboardCheck = tk.Checkbutton(window, text="Copy to Clipboard Automatically", variable=copyToClipboard, bg="#f0f0f0", font=("Arial", 10))
+copyClipboardCheck = tk.Checkbutton(
+    window, text="Copy to Clipboard Automatically", variable=copyToClipboard,
+    bg="#f0f0f0", font=("Arial", 10)
+)
 copyClipboardCheck.grid(row=4, column=0, columnspan=2, sticky="w")
 
-generateBtn = tk.Button(window, text="Generate Password", command=passwordGenerator, bg="#4CAF50", fg="white", font=("Arial", 12), width=20)
-generateBtn.grid(row=5, column=0, columnspan=2, pady=(20,0))
+generateBtn = tk.Button(
+    window, text="Generate Password", command=passwordGenerator,
+    bg="#4CAF50", fg="white", font=("Arial", 12), width=20
+)
+generateBtn.grid(row=5, column=0, columnspan=2, pady=(20, 0))
 
-copyBtn = tk.Button(window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()), bg="#2196F3", fg="white", font=("Arial", 12), width=20)
-copyBtn.grid(row=5, column=2, columnspan=2, pady=(20,0))
+copyBtn = tk.Button(
+    window, text="Copy to Clipboard", command=lambda: pyperclip.copy(passwordField.get()),
+    bg="#2196F3", fg="white", font=("Arial", 12), width=20, state="disabled"
+)
+copyBtn.grid(row=5, column=2, columnspan=2, pady=(20, 0))
 
-passwordField = tk.Entry(window, font=("Arial", 14), width=35, bd=2, relief="groove")
-passwordField.grid(row=6, column=0, columnspan=4, pady=(10,0))
+passwordField = tk.Entry(
+    window, font=("Arial", 14), width=35, bd=2, relief="groove"
+)
+passwordField.grid(row=6, column=0, columnspan=4, pady=(10, 0))
 
-passwordStrengthLabel = tk.Label(window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10))
+passwordStrengthLabel = tk.Label(
+    window, text="", bg="#f0f0f0", fg="#333333", font=("Arial", 10)
+)
 passwordStrengthLabel.grid(row=7, column=0, columnspan=4)
 
 if __name__ == "__main__":
