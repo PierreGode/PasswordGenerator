@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import codecs
 import os
-
+iport gnu
 # Utility function to read the README file.
 def read_readme(fname):
     return codecs.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
