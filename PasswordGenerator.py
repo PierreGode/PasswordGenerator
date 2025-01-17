@@ -18,7 +18,7 @@ def load_model():
         from transformers import pipeline
         generator = pipeline('text-generation', model='distilgpt2', truncation=True)
     return generator
-
+#change to gptmodel
 # Initialize generator as None for lazy loading
 generator = None
 
