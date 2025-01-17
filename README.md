@@ -7,7 +7,7 @@
 This build generates an artifact and 2 exe files.
 one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
 <p>
-The heavier app has the addition of LLM sentence generation + "scramble", this means that everthing is processed on your own computer.
+The heavier app has the addition of LLM sentence generation + "scrambleee", this means that everthing is processed on your own computer.
 
 <p>
   <img width="384" alt="image" src="https://github.com/PierreGode/PasswordGenerator/assets/8579922/20fa8633-7b94-44d5-98f5-461bfcfa12c1">
