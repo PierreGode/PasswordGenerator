@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 import codecs
-import osa
+import os
 
 # Utility function to read the README file.
 def read_readme(fname):
