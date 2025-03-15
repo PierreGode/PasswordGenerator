@@ -5,6 +5,8 @@ import string
 import random
 import pyperclip
 
+
+
 def open_main_app():
     def onClickHelp():
         messagebox.showinfo("Password Generator Help", "1. Choose password length (minimum 10 characters).\n2. Select options for including special characters and auto-copying to clipboard.\n3. Click 'Generate Password'.")
