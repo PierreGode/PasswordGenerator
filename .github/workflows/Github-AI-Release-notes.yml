@@ -31,7 +31,11 @@ jobs:
       - name: Extract Release Version from README.md
         id: extract_version
         run: |
-          VERSION=$(grep -i "release version :" README.md | head -n 1 | sed -E 's/.*release version :[ ]*([^ ]+).*/\1/')
+          # This pattern looks for a line containing "Release version" (case-insensitive),
+          # followed by an optional space before the colon, then any number of spaces,
+          # then captures one "word" (e.g., 3.0) as the version.
+          # Adjust if you have a different format, e.g. "Release version: v3.0"
+          VERSION=$(grep -i "release version" README.md | head -n 1 | sed -E 's/.*[Rr]elease[ ]*version[ ]*:?[ ]*([^ ]+).*/\1/i')
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Read Commit Message
@@ -69,9 +73,11 @@ jobs:
           import json
           from datetime import datetime
 
-          # Generate today's actual date in the desired format
+          # Generate today's date in the desired format
           today = datetime.now().strftime("%B %d, %Y")
-          version = os.environ.get('VERSION', "1.0.0")  # Default to "1.0.0" if not found
+
+          # Retrieve version from the environment (defaults to "1.0.0" if extraction fails)
+          version = os.environ.get('VERSION', "1.0.0")
 
           # Load the GitHub event
           event_path = os.environ.get('GITHUB_EVENT_PATH')
@@ -105,9 +111,7 @@ jobs:
           if not diff_text:
               diff_text = "No significant changes detected."
 
-          # Construct the summary prompt:
-          # - README is for context only (what the app is about).
-          # - Release notes focus on commit/diff changes, ignoring file-level detail.
+          # Construct the summary prompt
           summary_prompt = (
               f"Application Context (for reference only):\n{readme_content}\n\n"
               "Generate customer-friendly release notes based on the following commit and diff info. "
