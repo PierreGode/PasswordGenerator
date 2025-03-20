@@ -20,7 +20,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Read README.md
+      - name: Read README.md for Context
         id: read_readme
         run: |
           README_CONTENT=$(cat README.md)
@@ -31,11 +31,10 @@ jobs:
       - name: Extract Release Version from README.md
         id: extract_version
         run: |
-          # Look for a line that contains "release version :" and extract the version number.
-          # Adjust the sed pattern if your README format differs.
+          # Look for a line that contains "release version :" and extract the version number (case-insensitive).
           VERSION=$(grep -i "release version :" README.md | head -n 1 | sed -E 's/.*release version :[ ]*([^ ]+).*/\1/')
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-      
+
       - name: Read Commit Message
         id: read_commit
         run: |
@@ -107,12 +106,17 @@ jobs:
           if not diff_text:
               diff_text = "No significant changes detected."
 
-          # Construct the summary prompt using the improved release notes format.
+          # Construct the summary prompt:
+          # - The README is provided as context only (to understand the app and its purpose).
+          # - The release notes must focus solely on the changes made in the PR (commits/diffs).
           summary_prompt = (
-              f"{readme_content}\n\n"
-              "You are an AI tasked with generating detailed release notes for customers. "
-              "Please ignore technical details such as file modifications; focus solely on customer-relevant changes. "
-              "Your output must follow this format:\n\n"
+              f"Application Context (for reference only):\n{readme_content}\n\n"
+              "Generate customer-friendly release notes based solely on the following commit and diff information. "
+              "Do not include technical details about files or internal components. The release notes should focus on describing the changes and their impact on the application.\n\n"
+              f"**Commit Message:**\n{commit_content}\n\n"
+              f"**Pull Request Diff:**\n{diff_text}\n\n"
+              f"**Initial PR Comment:**\n{initial_comment}\n\n"
+              "Your output must follow this format exactly:\n\n"
               "-----------------------------------------\n"
               "Fixes & Improvements\n"
               "We have implemented several enhancements:\n\n"
@@ -121,14 +125,7 @@ jobs:
               "• ...\n\n"
               f"Version: {version}\n"
               f"Available: {today}, Updated: {today}\n"
-              "-----------------------------------------\n\n"
-              "Instructions:\n"
-              "1. Provide a concise summary of the release focusing on enhancements, bug fixes, and improvements.\n"
-              "2. Exclude technical details like file modifications; only include customer-relevant release notes.\n\n"
-              "Reference Information (for internal use only):\n"
-              f"**Commit Message:**\n{commit_content}\n\n"
-              f"**Pull Request Diff:**\n{diff_text}\n\n"
-              f"**Initial PR Comment:**\n{initial_comment}\n\n"
+              "-----------------------------------------\n"
           )
 
           # Call OpenAI API
@@ -168,7 +165,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Read README.md
+      - name: Read README.md for Context
         id: read_readme_review
         run: |
           README_CONTENT=$(cat README.md)
