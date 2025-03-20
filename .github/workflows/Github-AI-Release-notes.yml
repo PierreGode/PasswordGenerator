@@ -31,7 +31,6 @@ jobs:
       - name: Extract Release Version from README.md
         id: extract_version
         run: |
-          # Look for a line that contains "release version :" and extract the version number (case-insensitive).
           VERSION=$(grep -i "release version :" README.md | head -n 1 | sed -E 's/.*release version :[ ]*([^ ]+).*/\1/')
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -107,25 +106,23 @@ jobs:
               diff_text = "No significant changes detected."
 
           # Construct the summary prompt:
-          # - The README is provided as context only (to understand the app and its purpose).
-          # - The release notes must focus solely on the changes made in the PR (commits/diffs).
+          # - README is for context only (what the app is about).
+          # - Release notes focus on commit/diff changes, ignoring file-level detail.
           summary_prompt = (
               f"Application Context (for reference only):\n{readme_content}\n\n"
-              "Generate customer-friendly release notes based solely on the following commit and diff information. "
-              "Do not include technical details about files or internal components. The release notes should focus on describing the changes and their impact on the application.\n\n"
+              "Generate customer-friendly release notes based on the following commit and diff info. "
+              "Do NOT include technical file details. Focus on how these changes impact the application.\n\n"
               f"**Commit Message:**\n{commit_content}\n\n"
               f"**Pull Request Diff:**\n{diff_text}\n\n"
               f"**Initial PR Comment:**\n{initial_comment}\n\n"
-              "Your output must follow this format exactly:\n\n"
-              "-----------------------------------------\n"
-              "Fixes & Improvements\n"
+              "Use this exact format:\n\n"
+              "**Fixes & Improvements**\n"
               "We have implemented several enhancements:\n\n"
               "• [Enhancement or fix description]\n"
               "• [Another improvement]\n"
               "• ...\n\n"
-              f"Version: {version}\n"
+              f"**Version:** {version}\n"
               f"Available: {today}, Updated: {today}\n"
-              "-----------------------------------------\n"
           )
 
           # Call OpenAI API
