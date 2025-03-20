@@ -2,7 +2,7 @@
 
 ![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/exefile.yml/badge.svg) ![GitHub Workflow Status](https://github.com/PierreGode/PasswordGenerator/actions/workflows/bandit.yml/badge.svg) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/PierreGode/PasswordGenerator)](https://github.com/PierreGode/PasswordGenerator/releases) [![GitHub All Releases](https://img.shields.io/github/downloads/PierreGode/PasswordGenerator/total)](https://github.com/PierreGode/PasswordGenerator/releases)
 
-
+Release version: 3.0
 
 This build generates an artifact and 2 exe files.
 one lighter Windows app with random password generation, and one with 20 sec load time due to loading of transformes LLM.
